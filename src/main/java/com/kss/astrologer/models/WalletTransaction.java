@@ -1,6 +1,5 @@
 package com.kss.astrologer.models;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -32,7 +31,7 @@ public class WalletTransaction {
     @JoinColumn(name = "wallet_id")
     private Wallet wallet;
 
-    private BigDecimal amount;
+    private Double amount;
 
     @Enumerated(EnumType.STRING)
     private TransactionType type; // CREDIT, DEBIT

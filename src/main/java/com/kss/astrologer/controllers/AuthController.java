@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.kss.astrologer.dto.UserDto;
 import com.kss.astrologer.handler.ResponseHandler;
 import com.kss.astrologer.models.User;
 import com.kss.astrologer.request.AuthRequest;
@@ -44,7 +45,8 @@ public class AuthController {
         if (otpService.verifyOtp(verifyOtpRequest.getMobile(), verifyOtpRequest.getOtp())) {
             User user = userService.getOrCreateUser(verifyOtpRequest.getMobile());
             String token = jwtService.generateToken(user.getMobile());
-            return ResponseHandler.responseBuilder(HttpStatus.OK, true, "OTP verified successfully", "user", user, token);
+            UserDto userDto = new UserDto(user);
+            return ResponseHandler.responseBuilder(HttpStatus.OK, true, "OTP verified successfully", "user", userDto, token);
         }
 
         return ResponseHandler.responseBuilder(HttpStatus.UNAUTHORIZED, false, "Invalid OTP");

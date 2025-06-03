@@ -1,6 +1,5 @@
 package com.kss.astrologer.models;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,7 +41,7 @@ public class ChatSession {
 
     private int totalMinutes;
 
-    private BigDecimal totalCost;
+    private Double totalCost;
 
     @OneToMany(mappedBy = "session", cascade = CascadeType.ALL)
     private List<ChatMessage> messages = new ArrayList<>();

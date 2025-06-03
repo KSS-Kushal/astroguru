@@ -1,6 +1,5 @@
 package com.kss.astrologer.models;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -31,7 +30,7 @@ public class Wallet {
     @JoinColumn(name = "user_id")
     private User user;
 
-    private BigDecimal balance = BigDecimal.ZERO;
+    private Double balance = 0.0;
 
     @OneToMany(mappedBy = "wallet", cascade = CascadeType.ALL)
     private List<WalletTransaction> transactions = new ArrayList<>();

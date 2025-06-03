@@ -1,10 +1,11 @@
 package com.kss.astrologer.models;
 
-import java.math.BigDecimal;
 import java.util.UUID;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
@@ -20,10 +21,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class AstrologerDetails {
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @OneToOne
+    @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "user_id")
     private User user; // Must be role=ASTROLOGER
 
@@ -31,10 +32,10 @@ public class AstrologerDetails {
 
     private int experienceYears;
 
-    private BigDecimal pricePerMinuteChat;
-    private BigDecimal pricePerMinuteVoice;
-    private BigDecimal pricePerMinuteVideo;
+    private Double pricePerMinuteChat;
+    private Double pricePerMinuteVoice;
+    private Double pricePerMinuteVideo;
 
-    private boolean isApproved;
+    private boolean isBlocked;
 }
 

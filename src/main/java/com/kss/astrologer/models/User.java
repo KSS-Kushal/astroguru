@@ -1,8 +1,11 @@
 package com.kss.astrologer.models;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.UUID;
 
+import com.kss.astrologer.types.Gender;
 import com.kss.astrologer.types.Role;
 
 import jakarta.persistence.CascadeType;
@@ -16,20 +19,33 @@ import jakarta.persistence.Id;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Builder;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "users")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     private String name;
+
+    @Enumerated(EnumType.STRING)
+    private Gender gender;
+    
+    private LocalDate birthDate;
+    private LocalTime birthTime;
+    private String birthPlace;
+    private Double latitude;
+    private Double longitude;
 
     @Column(unique = true, nullable = false)
     private String mobile;
@@ -40,6 +56,7 @@ public class User {
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private Wallet wallet;
 
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }
 

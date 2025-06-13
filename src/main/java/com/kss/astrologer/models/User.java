@@ -1,8 +1,11 @@
 package com.kss.astrologer.models;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.UUID;
 
+import com.kss.astrologer.types.Gender;
 import com.kss.astrologer.types.Role;
 
 import jakarta.persistence.CascadeType;
@@ -34,6 +37,15 @@ public class User {
     private UUID id;
 
     private String name;
+
+    @Enumerated(EnumType.STRING)
+    private Gender gender;
+    
+    private LocalDate birthDate;
+    private LocalTime birthTime;
+    private String birthPlace;
+    private Double latitude;
+    private Double longitude;
 
     @Column(unique = true, nullable = false)
     private String mobile;

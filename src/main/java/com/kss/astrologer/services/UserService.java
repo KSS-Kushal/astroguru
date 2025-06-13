@@ -11,6 +11,7 @@ import com.kss.astrologer.dto.UserDto;
 import com.kss.astrologer.exceptions.CustomException;
 import com.kss.astrologer.models.User;
 import com.kss.astrologer.repository.UserRepository;
+import com.kss.astrologer.request.KundliRequest;
 import com.kss.astrologer.types.Role;
 
 @Service
@@ -47,5 +48,22 @@ public class UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "User not found"));
         return new UserDto(user);
+    }
+
+    public UserDto addUserDetails(KundliRequest data, UUID id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "User not found"));
+
+        user.setName(data.getName());
+        user.setGender(data.getGender());
+        user.setBirthDate(data.getBirthDate());
+        user.setBirthTime(data.getBirthTime());
+        user.setBirthPlace(data.getBirthPlace());
+        user.setLatitude(data.getLatitude());
+        user.setLongitude(data.getLongitude());
+        user.setUpdatedAt(LocalDateTime.now());
+
+        User updatedUser = userRepository.save(user);
+        return new UserDto(updatedUser);
     }
 }

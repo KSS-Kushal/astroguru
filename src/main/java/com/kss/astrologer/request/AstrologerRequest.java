@@ -21,7 +21,9 @@ public class AstrologerRequest {
     private String mobile;
     private String expertise;
 
+    private String about;
     private int experienceYears = 0;
+    private String languages; // Coma separated list of languages
 
     private Double pricePerMinuteChat = 0.0;
     private Double pricePerMinuteVoice = 0.0;

@@ -36,6 +36,10 @@ public class ChatMessage {
     @JoinColumn(name = "sender_id")
     private User sender;
 
+    @ManyToOne
+    @JoinColumn(name = "receiver_id")
+    private User receiver;
+
     @Column(columnDefinition = "TEXT")
     private String message;
 

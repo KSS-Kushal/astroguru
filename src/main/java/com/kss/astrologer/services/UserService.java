@@ -66,4 +66,9 @@ public class UserService {
         User updatedUser = userRepository.save(user);
         return new UserDto(updatedUser);
     }
+
+    public User getById(UUID id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "User not found"));
+    }
 }

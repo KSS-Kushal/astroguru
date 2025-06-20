@@ -44,8 +44,11 @@ public class AstrologerService {
 
         AstrologerDetails astrologerDetails = new AstrologerDetails();
         astrologerDetails.setUser(user);
+        astrologerDetails.setAbout(astrologerRequest.getAbout());
         astrologerDetails.setExpertise(astrologerRequest.getExpertise());
         astrologerDetails.setExperienceYears(astrologerRequest.getExperienceYears());
+        astrologerDetails.setLanguages(astrologerRequest.getLanguages());
+        astrologerDetails.setImgUri("https://img.freepik.com/free-vector/young-man-orange-hoodie_1308-175788.jpg?ga=GA1.1.1570607994.1749976697&semt=ais_hybrid&w=740");
         astrologerDetails.setPricePerMinuteChat(astrologerRequest.getPricePerMinuteChat());
         astrologerDetails.setPricePerMinuteVoice(astrologerRequest.getPricePerMinuteVoice());
         astrologerDetails.setPricePerMinuteVideo(astrologerRequest.getPricePerMinuteVideo());

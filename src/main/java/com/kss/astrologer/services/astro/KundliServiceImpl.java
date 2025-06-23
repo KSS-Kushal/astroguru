@@ -26,7 +26,7 @@ import org.springframework.web.client.RestTemplate;
 import com.kss.astrologer.request.KundliRequest;
 
 @Service
-public class KundliServiceIml implements KundliService {
+public class KundliServiceImpl implements KundliService {
 
     @Autowired
     private RestTemplate restTemplate;
@@ -39,6 +39,7 @@ public class KundliServiceIml implements KundliService {
 
     private final String tokenUrl = "https://api.prokerala.com/token";
     private final String kundliUrl = "https://api.prokerala.com/v2/astrology/kundli";
+    private final String chartUrl = "https://api.prokerala.com/v2/astrology/chart";
 
     @Override
     public String getAccessToken() {
@@ -85,7 +86,7 @@ public class KundliServiceIml implements KundliService {
             + "&datetime=" + encode(datetime);
         
 
-            URI uri = URI.create(url);
+        URI uri = URI.create(url);
         // uri = uri.replace("+", "%2B");
         System.out.println("Request URL: " + uri);
         System.out.println("date time: " + datetime);
@@ -97,6 +98,44 @@ public class KundliServiceIml implements KundliService {
                 Object.class);
 
         return response.getBody();
+
+    }
+
+    @Override
+    public String getChart(KundliRequest kundliRequest, String chartType, String chartStyle) {
+        String accessToken = getAccessToken();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        String coordinates = kundliRequest.getLatitude() + "," + kundliRequest.getLongitude();
+        String datetime = getFormattedDateTime(kundliRequest); // Instead of manually formatting
+
+        String url = chartUrl
+            + "?ayanamsa=1"
+            + "&coordinates=" + coordinates
+            + "&datetime=" + encode(datetime)
+            + "&chart_type=" + chartType
+            + "&chart_style=" + chartStyle
+            + "&format=svg"
+            + "&la=en";
+
+        URI uri = URI.create(url);
+        // uri = uri.replace("+", "%2B");
+        System.out.println("Request URL: " + uri);
+        System.out.println("date time: " + datetime);
+
+        ResponseEntity<String> response = restTemplate.exchange(
+            uri,
+            HttpMethod.GET,
+            entity,
+            String.class
+        );
+
+        return response.getBody(); // this is SVG XML string
 
     }
 
@@ -122,4 +161,5 @@ public class KundliServiceIml implements KundliService {
         // Format in ISO 8601 with timezone offset
         return zonedDateTime.toOffsetDateTime().format(formatter); // e.g., 1990-08-15T06:30:00+05:30
     }
+
 }

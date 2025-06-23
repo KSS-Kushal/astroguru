@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.kss.astrologer.handler.ResponseHandler;
@@ -34,5 +35,13 @@ public class KundliController {
         }
         logger.info("Kundli generated successfully for request: {}", kundliRequest);
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Kundli generated successfully", kundli);
+    }
+
+    @PostMapping(value = "/chart", produces = "image/svg+xml")
+    public ResponseEntity<String> getChartSvg(@Valid @RequestBody KundliRequest req,
+                                              @RequestParam String chartType,
+                                              @RequestParam String chartStyle) {
+        String svgXml = kundliService.getChart(req, chartType, chartStyle);
+        return ResponseEntity.ok(svgXml);
     }
 }

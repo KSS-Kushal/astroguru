@@ -12,6 +12,7 @@ import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -68,6 +69,7 @@ public class KundliServiceImpl implements KundliService {
         }
     }
 
+    @Cacheable(value = "kundli", key = "#kundliRequest.latitude + '-' + #kundliRequest.longitude + '-' + #kundliRequest.birthDate + '-' + #kundliRequest.birthTime")
     @Override
     public Object getKundli(KundliRequest kundliRequest) {
         String accessToken = getAccessToken();
@@ -101,6 +103,7 @@ public class KundliServiceImpl implements KundliService {
 
     }
 
+    @Cacheable(value = "chart", key = "#kundliRequest.latitude + '-' + #kundliRequest.longitude + '-' + #kundliRequest.birthDate + '-' + #kundliRequest.birthTime + '-' + #chartType + '-' + #chartStyle")
     @Override
     public String getChart(KundliRequest kundliRequest, String chartType, String chartStyle) {
         String accessToken = getAccessToken();

@@ -1,15 +1,20 @@
 package com.kss.astrologer.services;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kss.astrologer.dto.ChatQueueEntry;
 import com.kss.astrologer.exceptions.CustomException;
 import com.kss.astrologer.models.AstrologerDetails;
 import com.kss.astrologer.models.ChatSession;
@@ -23,6 +28,8 @@ import com.kss.astrologer.types.ChatStatus;
 
 @Service
 public class ChatSessionService {
+
+    private static final Logger logger = LoggerFactory.getLogger(ChatSessionService.class);
 
     @Autowired
     private ChatSessionRepository sessionRepo;
@@ -38,28 +45,50 @@ public class ChatSessionService {
 
     @Autowired
     private WalletRepository walletRepository;
-    
+
     @Autowired
     private ObjectMapper objectMapper;
 
-    public String requestChat(UUID userId, UUID astrologerId, int requestedMinutes) {
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
+
+    @Autowired
+    private TaskScheduler taskScheduler;
+
+    public long requestChat(UUID userId, UUID astrologerId, int requestedMinutes) {
         // AstrologerDetails astrologer = astrologerRepository.findById(astrologerId)
-        //         .orElseThrow(() -> new CustomException("Astrologer not found"));
+        // .orElseThrow(() -> new CustomException("Astrologer not found"));
         Optional<ChatSession> activeSession = sessionRepo.findByAstrologerIdAndStatus(astrologerId, ChatStatus.ACTIVE);
 
         if (activeSession.isEmpty()) {
-            return startChat(userId, astrologerId, requestedMinutes).getId().toString();
+            startChat(userId, astrologerId, requestedMinutes);
+            return 0;
         } else {
             queueService.enqueue(astrologerId, userId, requestedMinutes);
             long pos = queueService.getPosition(astrologerId, userId);
-            return "Astrologer is busy. You are in queue at position: " + (pos + 1);
+            messagingTemplate.convertAndSend("/topic/queue/" + astrologerId, "New chat request received");
+            return pos + 1;
         }
     }
 
+    public String acceptChat(UUID userId, UUID astrologerId) {
+        if (!queueService.isNextInQueue(astrologerId, userId)) {
+            return "User is not first in the queue.";
+        }
+
+        String entry = queueService.dequeue(astrologerId);
+        int duration = queueService.parseRequestedMinutes(entry);
+
+        startChat(userId, astrologerId, duration);
+        // schedulerService.scheduleChatEnd(astrologerId, userId, duration);
+
+        return "Chat accepted and started.";
+    }
+
     @Transactional
-    public ChatSession startChat(UUID userId, UUID astrologerId, int requestedMinutes) {
+    public void startChat(UUID userId, UUID astrologerId, int requestedMinutes) {
         if (requestedMinutes < 5) {
-            throw new IllegalArgumentException("Minimum chat duration is 5 minutes.");
+            throw new CustomException("Minimum chat duration is 5 minutes.");
         }
 
         User user = userRepository.findById(userId).orElseThrow();
@@ -88,7 +117,23 @@ public class ChatSessionService {
                 .totalMinutes(requestedMinutes)
                 .build();
 
-        return sessionRepo.save(session);
+        ChatSession createdSession = sessionRepo.save(session);
+        messagingTemplate.convertAndSend("/topic/chat/" + userId + "/chatId", createdSession.getId().toString());
+        messagingTemplate.convertAndSend("/topic/chat/" + astrologerId + "/chatId", createdSession.getId().toString());
+
+        final long[] remainingSeconds = {createdSession.getTotalMinutes() * 60L};
+
+        taskScheduler.scheduleAtFixedRate(() -> {
+            if (remainingSeconds[0] <= 0) {
+                // messagingTemplate.convertAndSend("/topic/chat/" + createdSession.getId() + "/end", "Chat ended");
+                endChat(createdSession.getId());
+                return;
+            }
+
+            messagingTemplate.convertAndSend("/topic/chat/" + createdSession.getId() + "/timer", remainingSeconds[0]);
+            remainingSeconds[0] -= 1;
+
+        }, Duration.ofSeconds(1));
     }
 
     public void endChat(UUID sessionId) {
@@ -98,17 +143,20 @@ public class ChatSessionService {
 
         sessionRepo.save(session);
 
+        try {
+            messagingTemplate.convertAndSend("/topic/chat/" + session.getUser().getId(), objectMapper.writeValueAsString(Map.of("status", "ended")));
+        } catch (Exception e) {
+            logger.error("Error to send msg end notification: ", e);
+        }
+
         // Trigger next user from queue
         UUID astrologerId = session.getAstrologer().getId();
         String nextUser = queueService.dequeue(astrologerId);
         if (nextUser != null) {
-            try {
-                ChatQueueEntry entry = objectMapper.readValue(nextUser, ChatQueueEntry.class);
-                startChat(entry.getUserId(), astrologerId, entry.getRequestedMinutes());
-                // TODO: Notify user via WebSocket
-            } catch (Exception e) {
-                throw new CustomException("Failed to start chat for next user in queue");
-            }
+            messagingTemplate.convertAndSend("/topic/queue/" + astrologerId, "Chat ended, next user can be served");
+            UUID userId = queueService.parseUserId(nextUser);
+            int requestedMinutes = queueService.parseRequestedMinutes(nextUser);
+            startChat(userId, astrologerId, requestedMinutes);
         }
     }
 
@@ -117,5 +165,4 @@ public class ChatSessionService {
                 .orElseThrow(() -> new CustomException("Chat session not found"));
     }
 
-    
 }

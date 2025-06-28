@@ -2,6 +2,7 @@ package com.kss.astrologer.services;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -15,6 +16,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kss.astrologer.dto.ChatQueueEntry;
+import com.kss.astrologer.dto.UserDto;
 import com.kss.astrologer.exceptions.CustomException;
 import com.kss.astrologer.models.AstrologerDetails;
 import com.kss.astrologer.models.ChatSession;
@@ -91,13 +94,22 @@ public class ChatSessionService {
             throw new CustomException("Minimum chat duration is 5 minutes.");
         }
 
-        User user = userRepository.findById(userId).orElseThrow();
-        AstrologerDetails astrologer = astrologerRepository.findByUserId(astrologerId).orElseThrow();
+        User user = userRepository.findById(userId).orElseThrow(() -> new CustomException("User not found"));
+        AstrologerDetails astrologer = astrologerRepository.findByUserId(astrologerId).orElseThrow(() -> new CustomException("Astrologer not found"));
 
         Double perMinuteRate = astrologer.getPricePerMinuteChat();
         Double totalCharge = perMinuteRate * requestedMinutes;
 
         Wallet wallet = user.getWallet();
+
+        if(wallet == null) {
+            wallet = new Wallet();
+            wallet.setBalance(0.0);
+            wallet.setUser(user);
+            wallet = walletRepository.save(wallet);
+            user.setWallet(wallet);
+            userRepository.save(user);
+        }
 
         if (wallet.getBalance().compareTo(totalCharge) < 0) {
             throw new CustomException("Not enough balance for " + requestedMinutes + " minutes.");
@@ -137,7 +149,7 @@ public class ChatSessionService {
     }
 
     public void endChat(UUID sessionId) {
-        ChatSession session = sessionRepo.findById(sessionId).orElseThrow();
+        ChatSession session = sessionRepo.findById(sessionId).orElseThrow(() -> new CustomException("Session not found"));
         session.setEndedAt(LocalDateTime.now());
         session.setStatus(ChatStatus.ENDED);
 
@@ -165,4 +177,22 @@ public class ChatSessionService {
                 .orElseThrow(() -> new CustomException("Chat session not found"));
     }
 
+    public List<UserDto> getRequestList(UUID astrologerId) {
+        List<ChatQueueEntry> queue = queueService.getQueue(astrologerId);
+        return queue.stream()
+                .map(entry -> {
+                    User user = userRepository.findById(entry.getUserId())
+                            .orElseThrow(() -> new CustomException("User not found"));
+                    return new UserDto(user);
+                })
+                .toList();
+    }
+
+    public long removeAllUserFromQueue(UUID astrologerId) {
+        long length = queueService.getQueueLength(astrologerId);
+        for(long i = 0; i<length; i++) {
+            queueService.dequeue(astrologerId);
+        }
+        return length;
+    }
 }

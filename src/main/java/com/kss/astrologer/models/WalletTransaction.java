@@ -3,6 +3,7 @@ package com.kss.astrologer.models;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.kss.astrologer.types.TransactionType;
 
 import jakarta.persistence.Entity;
@@ -29,6 +30,7 @@ public class WalletTransaction {
 
     @ManyToOne
     @JoinColumn(name = "wallet_id")
+    @JsonBackReference
     private Wallet wallet;
 
     private Double amount;

@@ -15,8 +15,10 @@ import com.kss.astrologer.dto.AstrologerDto;
 import com.kss.astrologer.exceptions.CustomException;
 import com.kss.astrologer.models.AstrologerDetails;
 import com.kss.astrologer.models.User;
+import com.kss.astrologer.models.Wallet;
 import com.kss.astrologer.repository.AstrologerRepository;
 import com.kss.astrologer.repository.UserRepository;
+import com.kss.astrologer.repository.WalletRepository;
 import com.kss.astrologer.request.AstrologerRequest;
 import com.kss.astrologer.types.Role;
 
@@ -29,6 +31,9 @@ public class AstrologerService {
     @Autowired
     private AstrologerRepository astrologerRepository;
 
+    @Autowired
+    private WalletRepository walletRepository;
+
     @Transactional
     public AstrologerDto createAstrologer(AstrologerRequest astrologerRequest) {
         User existingUser = userRepository.findByMobile(astrologerRequest.getMobile()).orElse(null);
@@ -40,6 +45,13 @@ public class AstrologerService {
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();
+        user = userRepository.save(user);
+
+        Wallet wallet = new Wallet();
+        wallet.setBalance(0.0);
+        wallet.setUser(user);
+        wallet = walletRepository.save(wallet);
+        user.setWallet(wallet);
         user = userRepository.save(user);
 
         AstrologerDetails astrologerDetails = new AstrologerDetails();

@@ -1,16 +1,13 @@
 package com.kss.astrologer.repository;
 
-import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import com.kss.astrologer.models.Wallet;
+import com.kss.astrologer.models.WalletTransaction;
 
 @Repository
-public interface WalletRepository extends JpaRepository<Wallet, UUID> {
-
-    Optional<Wallet> findByUserId(UUID userId);
+public interface WalletTransactionRepository extends JpaRepository<WalletTransaction, UUID> {
     
 }

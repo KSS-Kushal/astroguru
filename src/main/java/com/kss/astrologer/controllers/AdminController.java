@@ -17,8 +17,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.kss.astrologer.dto.AstrologerDto;
+import com.kss.astrologer.dto.WalletDto;
 import com.kss.astrologer.handler.ResponseHandler;
+import com.kss.astrologer.request.AddBalanceRequest;
 import com.kss.astrologer.request.AstrologerRequest;
+import com.kss.astrologer.services.AdminService;
 import com.kss.astrologer.services.AstrologerService;
 import com.kss.astrologer.services.UserService;
 
@@ -36,6 +39,9 @@ public class AdminController {
 
     @Autowired
     private AstrologerService astrologerService;
+
+    @Autowired
+    private AdminService adminService;
 
     @GetMapping("/create-admin")
     public ResponseEntity<Object> createAdmin() {
@@ -58,5 +64,12 @@ public class AdminController {
         AstrologerDto astrologer = astrologerService.deleteAstrologerById(id);
         logger.info("Deleted Astrologer with ID: {}", id);
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Astrologer deleted successfully", "astrologer", astrologer);
+    }
+
+    @PostMapping("/add-balance")
+    public ResponseEntity<Object> addBalanceInUserAccount(@RequestBody AddBalanceRequest request) {
+        WalletDto wallet = adminService.addBalanceInUserWallet(request.getMobile(), request.getAmount());
+        logger.info("transactions: " + wallet.getTransactions().size());
+        return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Balance added successfully", "wallet", wallet);
     }
 }

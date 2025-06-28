@@ -1,7 +1,9 @@
 package com.kss.astrologer.controllers;
 
+import java.util.List;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -12,20 +14,26 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.kss.astrologer.dto.UserDto;
 import com.kss.astrologer.handler.ResponseHandler;
 import com.kss.astrologer.request.ChatRequest;
 import com.kss.astrologer.security.CustomUserDetails;
 import com.kss.astrologer.services.ChatSessionService;
 
+import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/api/v1/chat")
 public class ChatController {
+    
+    @Autowired
     private ChatSessionService chatSessionService;
 
     @PostMapping("/request")
-    public ResponseEntity<?> requestChat(@RequestBody ChatRequest dto,
+    public ResponseEntity<Object> requestChat(@RequestBody @Valid ChatRequest dto,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         UUID userId = userDetails.getUserId();
+    System.out.println("User Id: " + userId);
         long position = chatSessionService.requestChat(userId, dto.getAstrologerId(), dto.getDuration());
         if(position == 0)
                 return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Chat started");
@@ -38,5 +46,19 @@ public class ChatController {
         UUID astrologerId = userDetails.getUserId();
         String msg = chatSessionService.acceptChat(userId, astrologerId);
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, msg);
+    }
+
+    @GetMapping("/queue")
+    public ResponseEntity<Object> getRequestList(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        UUID astrologerId = userDetails.getUserId();
+        List<UserDto> users = chatSessionService.getRequestList(astrologerId);
+        return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Request list fetched successfully", "users", users);
+    }
+
+    @GetMapping("/remove-all")
+    public ResponseEntity<Object> removeAllUserFromQueue(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        UUID astrologerId = userDetails.getUserId();
+        chatSessionService.removeAllUserFromQueue(astrologerId);
+        return ResponseHandler.responseBuilder(HttpStatus.OK, true, "All users removed from queue");
     }
 }

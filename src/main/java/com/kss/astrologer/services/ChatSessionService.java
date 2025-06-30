@@ -4,7 +4,6 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -17,17 +16,21 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kss.astrologer.dto.ChatQueueEntry;
+import com.kss.astrologer.dto.ChatSessionDto;
 import com.kss.astrologer.dto.UserDto;
 import com.kss.astrologer.exceptions.CustomException;
 import com.kss.astrologer.models.AstrologerDetails;
 import com.kss.astrologer.models.ChatSession;
 import com.kss.astrologer.models.User;
 import com.kss.astrologer.models.Wallet;
+import com.kss.astrologer.models.WalletTransaction;
 import com.kss.astrologer.repository.AstrologerRepository;
 import com.kss.astrologer.repository.ChatSessionRepository;
 import com.kss.astrologer.repository.UserRepository;
 import com.kss.astrologer.repository.WalletRepository;
+import com.kss.astrologer.repository.WalletTransactionRepository;
 import com.kss.astrologer.types.ChatStatus;
+import com.kss.astrologer.types.TransactionType;
 
 @Service
 public class ChatSessionService {
@@ -50,6 +53,9 @@ public class ChatSessionService {
     private WalletRepository walletRepository;
 
     @Autowired
+    private WalletTransactionRepository walletTransactionRepository;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     @Autowired
@@ -61,17 +67,17 @@ public class ChatSessionService {
     public long requestChat(UUID userId, UUID astrologerId, int requestedMinutes) {
         // AstrologerDetails astrologer = astrologerRepository.findById(astrologerId)
         // .orElseThrow(() -> new CustomException("Astrologer not found"));
-        Optional<ChatSession> activeSession = sessionRepo.findByAstrologerIdAndStatus(astrologerId, ChatStatus.ACTIVE);
+        // Optional<ChatSession> activeSession = sessionRepo.findByAstrologerIdAndStatus(astrologerId, ChatStatus.ACTIVE);
 
-        if (activeSession.isEmpty()) {
-            startChat(userId, astrologerId, requestedMinutes);
-            return 0;
-        } else {
+        // if (activeSession.isEmpty()) {
+        //     startChat(userId, astrologerId, requestedMinutes);
+        //     return 0;
+        // } else {
             queueService.enqueue(astrologerId, userId, requestedMinutes);
             long pos = queueService.getPosition(astrologerId, userId);
             messagingTemplate.convertAndSend("/topic/queue/" + astrologerId, "New chat request received");
             return pos + 1;
-        }
+        // }
     }
 
     public String acceptChat(UUID userId, UUID astrologerId) {
@@ -101,6 +107,7 @@ public class ChatSessionService {
         Double totalCharge = perMinuteRate * requestedMinutes;
 
         Wallet wallet = user.getWallet();
+        Wallet astrologerWallet = astrologer.getUser().getWallet();
 
         if(wallet == null) {
             wallet = new Wallet();
@@ -115,9 +122,38 @@ public class ChatSessionService {
             throw new CustomException("Not enough balance for " + requestedMinutes + " minutes.");
         }
 
-        // Deduct wallet amount
+        // Deduct wallet amount from user
+        WalletTransaction transaction = new WalletTransaction();
+        transaction.setAmount(totalCharge);
+        transaction.setType(TransactionType.DEBIT);
+        transaction.setWallet(wallet);
+        transaction.setDescription("Chat session with astrologer " + astrologer.getUser().getName() + " for " + requestedMinutes + " minutes.");
+
+        transaction = walletTransactionRepository.save(transaction);
+
         wallet.setBalance(wallet.getBalance() - totalCharge);
+        List<WalletTransaction> transactions = wallet.getTransactions();
+        transactions.add(transaction);
+        wallet.setTransactions(transactions);
         walletRepository.save(wallet);
+        // transaction.setWallet(wallet);
+        // walletTransactionRepository.save(transaction);
+
+        // Credit amount to astrologer's wallet
+        WalletTransaction astrologerTransaction = new WalletTransaction();
+        astrologerTransaction.setAmount(totalCharge);
+        astrologerTransaction.setType(TransactionType.CREDIT);
+        astrologerTransaction.setWallet(astrologerWallet);
+        astrologerTransaction.setDescription("Chat session with user " + user.getName() + " for " + requestedMinutes + " minutes.");
+        astrologerTransaction = walletTransactionRepository.save(astrologerTransaction);
+
+        astrologerWallet.setBalance(astrologerWallet.getBalance() + totalCharge);
+        List<WalletTransaction> astrologerTransactions = astrologerWallet.getTransactions();
+        astrologerTransactions.add(astrologerTransaction);
+        astrologerWallet.setTransactions(astrologerTransactions);
+        walletRepository.save(astrologerWallet);
+        // astrologerTransaction.setWallet(astrologerWallet);
+        // walletTransactionRepository.save(astrologerTransaction);
 
         ChatSession session = ChatSession.builder()
                 .user(user)
@@ -130,22 +166,11 @@ public class ChatSessionService {
                 .build();
 
         ChatSession createdSession = sessionRepo.save(session);
-        messagingTemplate.convertAndSend("/topic/chat/" + userId + "/chatId", createdSession.getId().toString());
-        messagingTemplate.convertAndSend("/topic/chat/" + astrologerId + "/chatId", createdSession.getId().toString());
+        ChatSessionDto createdSessionDto = new ChatSessionDto(createdSession);
+        messagingTemplate.convertAndSend("/topic/chat/" + userId + "/chatId", createdSessionDto);
+        messagingTemplate.convertAndSend("/topic/chat/" + astrologerId + "/chatId", createdSessionDto);
 
-        final long[] remainingSeconds = {createdSession.getTotalMinutes() * 60L};
-
-        taskScheduler.scheduleAtFixedRate(() -> {
-            if (remainingSeconds[0] <= 0) {
-                // messagingTemplate.convertAndSend("/topic/chat/" + createdSession.getId() + "/end", "Chat ended");
-                endChat(createdSession.getId());
-                return;
-            }
-
-            messagingTemplate.convertAndSend("/topic/chat/" + createdSession.getId() + "/timer", remainingSeconds[0]);
-            remainingSeconds[0] -= 1;
-
-        }, Duration.ofSeconds(1));
+        startTimer(createdSession.getId(), createdSession.getTotalMinutes());
     }
 
     public void endChat(UUID sessionId) {
@@ -166,9 +191,9 @@ public class ChatSessionService {
         String nextUser = queueService.dequeue(astrologerId);
         if (nextUser != null) {
             messagingTemplate.convertAndSend("/topic/queue/" + astrologerId, "Chat ended, next user can be served");
-            UUID userId = queueService.parseUserId(nextUser);
-            int requestedMinutes = queueService.parseRequestedMinutes(nextUser);
-            startChat(userId, astrologerId, requestedMinutes);
+            // UUID userId = queueService.parseUserId(nextUser);
+            // int requestedMinutes = queueService.parseRequestedMinutes(nextUser);
+            // startChat(userId, astrologerId, requestedMinutes);
         }
     }
 
@@ -194,5 +219,21 @@ public class ChatSessionService {
             queueService.dequeue(astrologerId);
         }
         return length;
+    }
+
+    private void startTimer(UUID sessionId, int duration) {
+        final long[] remainingSeconds = {duration * 60L};
+
+        taskScheduler.scheduleAtFixedRate(() -> {
+            if (remainingSeconds[0] <= 0) {
+                // messagingTemplate.convertAndSend("/topic/chat/" + createdSession.getId() + "/end", "Chat ended");
+                endChat(sessionId);
+                return;
+            }
+
+            messagingTemplate.convertAndSend("/topic/chat/" + sessionId + "/timer", remainingSeconds[0]);
+            remainingSeconds[0] -= 1;
+
+        }, Duration.ofSeconds(1));
     }
 }

@@ -70,6 +70,29 @@ public class AstrologerService {
         return new AstrologerDto(astrologerDetails);
     }
 
+    @Transactional
+    public AstrologerDto updateAstrologer(AstrologerRequest astrologerRequest, UUID astrologerId) {
+        AstrologerDetails astrologerDetails = astrologerRepository.findById(astrologerId)
+                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Astrologer not found"));
+
+        User user = astrologerDetails.getUser();
+
+        if (astrologerRequest.getName() != null) user.setName(astrologerRequest.getName());
+
+        if(astrologerRequest.getExpertise() != null) astrologerDetails.setExpertise(astrologerRequest.getExpertise());
+        if(astrologerRequest.getAbout() != null) astrologerDetails.setAbout(astrologerRequest.getAbout());
+        if(astrologerRequest.getExperienceYears() != null) astrologerDetails.setExperienceYears(astrologerRequest.getExperienceYears());
+        if(astrologerRequest.getLanguages() != null) astrologerDetails.setLanguages(astrologerRequest.getLanguages());
+        if(astrologerRequest.getPricePerMinuteChat() != null) astrologerDetails.setPricePerMinuteChat(astrologerRequest.getPricePerMinuteChat());
+        if(astrologerRequest.getPricePerMinuteVoice() != null) astrologerDetails.setPricePerMinuteVoice(astrologerRequest.getPricePerMinuteVoice());
+        if(astrologerRequest.getPricePerMinuteVideo() != null) astrologerDetails.setPricePerMinuteVideo(astrologerRequest.getPricePerMinuteVideo());
+
+        user.setUpdatedAt(LocalDateTime.now());
+        userRepository.save(user);
+        astrologerDetails = astrologerRepository.save(astrologerDetails);
+        return new AstrologerDto(astrologerDetails);
+    }
+
 
     public AstrologerDto getAstrologerById(UUID id) {
         AstrologerDetails astrologerDetails = astrologerRepository.findById(id)

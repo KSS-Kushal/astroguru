@@ -50,9 +50,14 @@ public class ChatQueueService {
         return redisTemplate.opsForList().leftPop(getQueueKey(astrologerId));
     }
 
+    public String peek(UUID astrologerId) {
+        return redisTemplate.opsForList().index(getQueueKey(astrologerId), 0);
+    }
+
     public List<ChatQueueEntry> getQueue(UUID astrologerId) {
         List<String> rawEntries = redisTemplate.opsForList().range(getQueueKey(astrologerId), 0, -1);
-        if (rawEntries == null) return new ArrayList<>();
+        if (rawEntries == null)
+            return new ArrayList<>();
 
         return rawEntries.stream()
                 .map(entry -> new ChatQueueEntry(parseUserId(entry), parseRequestedMinutes(entry)))
@@ -71,7 +76,8 @@ public class ChatQueueService {
 
     public void removeUser(UUID astrologerId, UUID userId) {
         List<String> queue = redisTemplate.opsForList().range(getQueueKey(astrologerId), 0, -1);
-        if (queue == null) return;
+        if (queue == null)
+            return;
 
         for (String entry : queue) {
             if (parseUserId(entry).equals(userId)) {
@@ -88,7 +94,8 @@ public class ChatQueueService {
     public long estimateWaitingTime(UUID astrologerId, UUID requestingUserId) {
         long waitingTime = 0;
 
-        Optional<ChatSession> activeSession = chatSessionRepository.findByAstrologerIdAndStatus(astrologerId, ChatStatus.ACTIVE);
+        Optional<ChatSession> activeSession = chatSessionRepository.findByAstrologerIdAndStatus(astrologerId,
+                ChatStatus.ACTIVE);
         if (activeSession.isPresent()) {
             ChatSession session = activeSession.get();
             long elapsed = Duration.between(session.getStartedAt(), LocalDateTime.now()).toMinutes();
@@ -98,7 +105,8 @@ public class ChatQueueService {
 
         List<ChatQueueEntry> queue = getQueue(astrologerId);
         for (ChatQueueEntry entry : queue) {
-            if (entry.getUserId().equals(requestingUserId)) break;
+            if (entry.getUserId().equals(requestingUserId))
+                break;
             waitingTime += entry.getRequestedMinutes();
         }
 
@@ -107,7 +115,8 @@ public class ChatQueueService {
 
     public boolean isNextInQueue(UUID astrologerId, UUID userId) {
         List<ChatQueueEntry> queue = getQueue(astrologerId);
-        if (queue.isEmpty()) return false;
+        if (queue.isEmpty())
+            return false;
         return queue.get(0).getUserId().equals(userId);
     }
 

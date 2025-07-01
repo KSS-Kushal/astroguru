@@ -14,4 +14,11 @@ public class TypingIndicator {
     private UUID senderId;
     private UUID receiverId;
     private boolean typing;
+    @Override
+    public String toString() {
+        return "{sessionId:" + sessionId + ", senderId:" + senderId + ", receiverId:" + receiverId
+                + ", typing:" + typing + "}";
+    }
+
+    
 }

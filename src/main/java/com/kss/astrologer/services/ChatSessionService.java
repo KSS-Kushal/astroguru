@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledFuture;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,6 +66,9 @@ public class ChatSessionService {
 
     @Autowired
     private TaskScheduler taskScheduler;
+
+    private final Map<UUID, ScheduledFuture<?>> timerTasks = new ConcurrentHashMap<>();
+    
 
     public long requestChat(UUID userId, UUID astrologerId, int requestedMinutes) {
         // AstrologerDetails astrologer = astrologerRepository.findById(astrologerId)
@@ -193,7 +198,7 @@ public class ChatSessionService {
         sessionRepo.save(session);
 
         try {
-            messagingTemplate.convertAndSend("/topic/chat/" + session.getUser().getId(),
+            messagingTemplate.convertAndSend("/topic/chat/" + session.getId(),
                     objectMapper.writeValueAsString(Map.of("status", "ended")));
         } catch (Exception e) {
             logger.error("Error to send msg end notification: ", e);
@@ -201,7 +206,7 @@ public class ChatSessionService {
 
         // Trigger next user from queue
         UUID astrologerId = session.getAstrologer().getId();
-        String nextUser = queueService.dequeue(astrologerId);
+        String nextUser = queueService.peek(astrologerId);
         if (nextUser != null) {
             messagingTemplate.convertAndSend("/topic/queue/" + astrologerId, "Chat ended, next user can be served");
             // UUID userId = queueService.parseUserId(nextUser);
@@ -237,17 +242,35 @@ public class ChatSessionService {
     private void startTimer(UUID sessionId, int duration) {
         final long[] remainingSeconds = { duration * 60L };
 
-        taskScheduler.scheduleAtFixedRate(() -> {
+        ScheduledFuture<?> future = taskScheduler.scheduleAtFixedRate(() -> {
             if (remainingSeconds[0] <= 0) {
                 // messagingTemplate.convertAndSend("/topic/chat/" + createdSession.getId() +
                 // "/end", "Chat ended");
                 endChat(sessionId);
+                cancelTimer(sessionId); // Cancel timer
                 return;
             }
-
-            messagingTemplate.convertAndSend("/topic/chat/" + sessionId + "/timer", remainingSeconds[0]);
+            logger.info("Timer: " + remainingSeconds[0] + " " + formatTime(remainingSeconds[0]));
+            messagingTemplate.convertAndSend("/topic/chat/" + sessionId + "/timer", formatTime(remainingSeconds[0]));
             remainingSeconds[0] -= 1;
 
         }, Duration.ofSeconds(1));
+
+        // Store the scheduled task so we can cancel it later
+        timerTasks.put(sessionId, future);
     }
+
+    private void cancelTimer(UUID sessionId) {
+        ScheduledFuture<?> future = timerTasks.remove(sessionId);
+        if (future != null && !future.isCancelled()) {
+            future.cancel(false);
+            logger.info("Timer cancelled for session {}", sessionId);
+        }
+    }
+
+    private String formatTime(long totalSeconds) {
+    long minutes = totalSeconds / 60;
+    long seconds = totalSeconds % 60;
+    return String.format("%02d:%02d", minutes, seconds);
+}
 }

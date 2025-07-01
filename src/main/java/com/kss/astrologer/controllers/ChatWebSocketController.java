@@ -51,17 +51,15 @@ public class ChatWebSocketController {
         // Persist
         ChatMessage saved = chatMessageService.save(message);
 
+        ChatMessageDto chatMessageDto = new ChatMessageDto(saved);
         // Send to receiver
-        messagingTemplate.convertAndSendToUser(
-                dto.getReceiverId().toString(), "/topic/messages", saved);
+        messagingTemplate.convertAndSend("/topic/chat/" + chatMessageDto.getReceiverId() + "/messages", chatMessageDto);
     }
 
     @MessageMapping("/chat.typing")
     public void handleTyping(@Payload TypingIndicator typingIndicator) {
-        messagingTemplate.convertAndSendToUser(
-                typingIndicator.getReceiverId().toString(),
-                "/topic/typing",
-                typingIndicator);
+        System.out.println(typingIndicator);
+        messagingTemplate.convertAndSend("/topic/chat/" + typingIndicator.getReceiverId() + "/typing", typingIndicator);
     }
 
 }

@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.kss.astrologer.dto.ChatSessionDto;
 import com.kss.astrologer.dto.UserDto;
 import com.kss.astrologer.handler.ResponseHandler;
 import com.kss.astrologer.request.ChatRequest;
@@ -60,5 +61,11 @@ public class ChatController {
         UUID astrologerId = userDetails.getUserId();
         chatSessionService.removeAllUserFromQueue(astrologerId);
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, "All users removed from queue");
+    }
+
+    @GetMapping("/history")
+    public ResponseEntity<Object> getChatHistory(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        List<ChatSessionDto> chatHistory = chatSessionService.getHistory(userDetails.getUserId());
+        return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Chat history fetched successfully", "chatHistory", chatHistory);
     }
 }

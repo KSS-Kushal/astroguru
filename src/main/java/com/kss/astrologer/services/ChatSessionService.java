@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,7 +69,7 @@ public class ChatSessionService {
     private TaskScheduler taskScheduler;
 
     private final Map<UUID, ScheduledFuture<?>> timerTasks = new ConcurrentHashMap<>();
-    
+
 
     public long requestChat(UUID userId, UUID astrologerId, int requestedMinutes) {
         // AstrologerDetails astrologer = astrologerRepository.findById(astrologerId)
@@ -179,6 +180,7 @@ public class ChatSessionService {
                 // .perMinuteRate(perMinuteRate)
                 .totalCost(totalCharge)
                 .totalMinutes(requestedMinutes)
+                .messages(List.of())
                 .build();
 
         ChatSession createdSession = sessionRepo.save(session);
@@ -237,6 +239,14 @@ public class ChatSessionService {
             queueService.dequeue(astrologerId);
         }
         return length;
+    }
+
+    public List<ChatSessionDto> getHistory(UUID userId) {
+        List<ChatSession> sessions = sessionRepo.findByUserIdOrAstrologerId(userId, userId);
+        List<ChatSessionDto> sessionDtos = sessions.stream()
+                .map(ChatSessionDto::new)
+                .collect(Collectors.toList());
+        return sessionDtos;
     }
 
     private void startTimer(UUID sessionId, int duration) {

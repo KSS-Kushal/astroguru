@@ -8,11 +8,14 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort.Direction;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Service;
@@ -241,11 +244,10 @@ public class ChatSessionService {
         return length;
     }
 
-    public List<ChatSessionDto> getHistory(UUID userId) {
-        List<ChatSession> sessions = sessionRepo.findByUserIdOrAstrologerId(userId, userId);
-        List<ChatSessionDto> sessionDtos = sessions.stream()
-                .map(ChatSessionDto::new)
-                .collect(Collectors.toList());
+    public Page<ChatSessionDto> getHistory(UUID userId, Integer page, Integer size) {
+        Pageable pageable = PageRequest.of(page-1, size, Direction.DESC, "startedAt");
+        Page<ChatSession> sessions = sessionRepo.findByUserIdOrAstrologerId(userId, userId, pageable);
+        Page<ChatSessionDto> sessionDtos = sessions.map(ChatSessionDto::new);
         return sessionDtos;
     }
 

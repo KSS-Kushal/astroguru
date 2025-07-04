@@ -28,14 +28,4 @@ public class ChatMessageDto {
         this.message = chatMessage.getMessage();
         this.timestamp = chatMessage.getCreatedAt();
     }
-
-    // @Override
-    // public String toString() {
-    //     return "{sessionId: " + sessionId + ", " +
-    //         "type: " + type + ", " +
-    //         "senderId: " + senderId + ", " +
-    //         "receiverId: " + receiverId + ", " +
-    //         "message: " + message + ", " +
-    //         "timestamp: " + timestamp + "}";
-    // }
 }

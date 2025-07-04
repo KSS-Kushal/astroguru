@@ -35,7 +35,6 @@ public class AstrologerDetails {
     private String expertise;
     private int experienceYears;
     private String languages; // Coma separated list of languages
-    private String imgUri;
 
     private Double pricePerMinuteChat;
     private Double pricePerMinuteVoice;

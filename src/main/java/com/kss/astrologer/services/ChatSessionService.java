@@ -12,6 +12,10 @@ import java.util.concurrent.ScheduledFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort.Direction;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Service;
@@ -68,7 +72,7 @@ public class ChatSessionService {
     private TaskScheduler taskScheduler;
 
     private final Map<UUID, ScheduledFuture<?>> timerTasks = new ConcurrentHashMap<>();
-    
+
 
     public long requestChat(UUID userId, UUID astrologerId, int requestedMinutes) {
         // AstrologerDetails astrologer = astrologerRepository.findById(astrologerId)
@@ -179,6 +183,7 @@ public class ChatSessionService {
                 // .perMinuteRate(perMinuteRate)
                 .totalCost(totalCharge)
                 .totalMinutes(requestedMinutes)
+                .messages(List.of())
                 .build();
 
         ChatSession createdSession = sessionRepo.save(session);
@@ -237,6 +242,13 @@ public class ChatSessionService {
             queueService.dequeue(astrologerId);
         }
         return length;
+    }
+
+    public Page<ChatSessionDto> getHistory(UUID userId, Integer page, Integer size) {
+        Pageable pageable = PageRequest.of(page-1, size, Direction.DESC, "startedAt");
+        Page<ChatSession> sessions = sessionRepo.findByUserIdOrAstrologerId(userId, userId, pageable);
+        Page<ChatSessionDto> sessionDtos = sessions.map(ChatSessionDto::new);
+        return sessionDtos;
     }
 
     private void startTimer(UUID sessionId, int duration) {

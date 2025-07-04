@@ -47,6 +47,8 @@ public class User {
     private Double latitude;
     private Double longitude;
 
+    private String imgUri;
+
     @Column(unique = true, nullable = false)
     private String mobile;
 

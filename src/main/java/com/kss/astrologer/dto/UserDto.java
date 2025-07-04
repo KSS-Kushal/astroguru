@@ -24,6 +24,7 @@ public class UserDto {
     private String birthPlace;
     private Double latitude;
     private Double longitude;
+    private String imgUri;
     private Role role;
     private Double walletBalance;
     
@@ -40,6 +41,7 @@ public class UserDto {
         this.birthPlace = user.getBirthPlace();
         this.latitude = user.getLatitude();
         this.longitude = user.getLongitude();
+        this.imgUri = user.getImgUri();
         this.role = user.getRole();
         this.walletBalance = user.getWallet() != null ? user.getWallet().getBalance() : 0.0;
         this.createdAt = user.getCreatedAt();

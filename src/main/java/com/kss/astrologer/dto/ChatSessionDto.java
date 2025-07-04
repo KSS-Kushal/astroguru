@@ -15,18 +15,20 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ChatSessionDto {
     private UUID id;
-    private UUID userId;
-    private UUID astrologerId;
+    private UserDto user;
+    private UserDto astrologer;
     private LocalDateTime startedAt;
+    private LocalDateTime endedAt;
     private ChatStatus status;
     private int totalMinutes;
     private Double totalCost;
 
     public ChatSessionDto(ChatSession session) {
         this.id = session.getId();
-        this.userId = session.getUser() != null ? session.getUser().getId() : null;
-        this.astrologerId = session.getAstrologer() != null ? session.getAstrologer().getId() : null;
+        this.user = session.getUser() != null ? new UserDto(session.getUser()) : null;
+        this.astrologer = session.getAstrologer() != null ? new UserDto(session.getAstrologer()) : null;
         this.startedAt = session.getStartedAt();
+        this.endedAt = session.getEndedAt();
         this.status = session.getStatus();
         this.totalMinutes = session.getTotalMinutes();
         this.totalCost = session.getTotalCost();

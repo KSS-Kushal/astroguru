@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -16,7 +17,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.kss.astrologer.dto.AstrologerDto;
 import com.kss.astrologer.dto.WalletDto;
@@ -29,6 +32,7 @@ import com.kss.astrologer.services.AdminService;
 import com.kss.astrologer.services.AstrologerService;
 import com.kss.astrologer.services.UserService;
 import com.kss.astrologer.services.WalletService;
+import com.kss.astrologer.services.aws.S3Service;
 
 import jakarta.validation.Valid;
 
@@ -51,6 +55,9 @@ public class AdminController {
     @Autowired
     private WalletService walletService;
 
+    @Autowired
+    private S3Service s3Service;
+
     @GetMapping("/create-admin")
     public ResponseEntity<Object> createAdmin() {
         final String mobile = "9749610532";
@@ -60,9 +67,12 @@ public class AdminController {
         return ResponseHandler.responseBuilder(HttpStatus.CREATED, true, "Admin created successfully");
     }
 
-    @PostMapping("/astrologer")
-    public ResponseEntity<Object> createAstrologer(@RequestBody @Valid AstrologerRequest astrologerRequest) {
-        AstrologerDto astrologer = astrologerService.createAstrologer(astrologerRequest);
+    @PostMapping(value = "/astrologer", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Object> createAstrologer(
+        @RequestPart("data") @Valid AstrologerRequest astrologerRequest,
+        @RequestPart("image") MultipartFile imageFile) {
+        String imgUrl = s3Service.uploadFile(imageFile);
+        AstrologerDto astrologer = astrologerService.createAstrologer(astrologerRequest, imgUrl);
         logger.info("Astrologer created successfully: {}", astrologer.getUser().getMobile());
         return ResponseHandler.responseBuilder(HttpStatus.CREATED, true, "Astrologer created successfully", "astrologer", astrologer);
     }

@@ -30,14 +30,11 @@ import com.kss.astrologer.models.AstrologerDetails;
 import com.kss.astrologer.models.ChatSession;
 import com.kss.astrologer.models.User;
 import com.kss.astrologer.models.Wallet;
-import com.kss.astrologer.models.WalletTransaction;
 import com.kss.astrologer.repository.AstrologerRepository;
 import com.kss.astrologer.repository.ChatSessionRepository;
 import com.kss.astrologer.repository.UserRepository;
 import com.kss.astrologer.repository.WalletRepository;
-import com.kss.astrologer.repository.WalletTransactionRepository;
 import com.kss.astrologer.types.ChatStatus;
-import com.kss.astrologer.types.TransactionType;
 
 @Service
 public class ChatSessionService {
@@ -59,8 +56,11 @@ public class ChatSessionService {
     @Autowired
     private WalletRepository walletRepository;
 
+    // @Autowired
+    // private WalletTransactionRepository walletTransactionRepository;
+
     @Autowired
-    private WalletTransactionRepository walletTransactionRepository;
+    private WalletService walletService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -75,20 +75,23 @@ public class ChatSessionService {
 
 
     public long requestChat(UUID userId, UUID astrologerId, int requestedMinutes) {
-        // AstrologerDetails astrologer = astrologerRepository.findById(astrologerId)
-        // .orElseThrow(() -> new CustomException("Astrologer not found"));
-        // Optional<ChatSession> activeSession =
-        // sessionRepo.findByAstrologerIdAndStatus(astrologerId, ChatStatus.ACTIVE);
+        AstrologerDetails astrologer = astrologerRepository.findByUserId(astrologerId)
+                .orElseThrow(() -> new CustomException("Astrologer not found"));
 
-        // if (activeSession.isEmpty()) {
-        // startChat(userId, astrologerId, requestedMinutes);
-        // return 0;
-        // } else {
+        Double perMinuteRate = astrologer.getPricePerMinuteChat();
+        Wallet wallet = walletService.getWalletByUserId(userId);
+        if (wallet == null) {
+            throw new CustomException("Wallet not found for user ID: " + userId);
+        }
+        Double totalCharge = perMinuteRate * requestedMinutes;
+
+        if (wallet.getBalance().compareTo(totalCharge) < 0) {
+            throw new CustomException("Not enough balance for " + requestedMinutes + " minutes.");
+        }
         queueService.enqueue(astrologerId, userId, requestedMinutes);
         long pos = queueService.getPosition(astrologerId, userId);
         messagingTemplate.convertAndSend("/topic/queue/" + astrologerId, "New chat request received");
         return pos + 1;
-        // }
     }
 
     public String acceptChat(UUID userId, UUID astrologerId) {
@@ -125,7 +128,7 @@ public class ChatSessionService {
         Double totalCharge = perMinuteRate * requestedMinutes;
 
         Wallet wallet = user.getWallet();
-        Wallet astrologerWallet = astrologer.getUser().getWallet();
+        // Wallet astrologerWallet = astrologer.getUser().getWallet();
 
         if (wallet == null) {
             wallet = new Wallet();
@@ -141,46 +144,44 @@ public class ChatSessionService {
         }
 
         // Deduct wallet amount from user
-        WalletTransaction transaction = new WalletTransaction();
-        transaction.setAmount(totalCharge);
-        transaction.setType(TransactionType.DEBIT);
-        transaction.setWallet(wallet);
-        transaction.setDescription("Chat session with astrologer " + astrologer.getUser().getName() + " for "
+        // WalletTransaction transaction = new WalletTransaction();
+        // transaction.setAmount(totalCharge);
+        // transaction.setType(TransactionType.DEBIT);
+        // transaction.setWallet(wallet);
+        // transaction.setDescription("Chat session with astrologer " + astrologer.getUser().getName() + " for "
+        //         + requestedMinutes + " minutes.");
+
+        // transaction = walletTransactionRepository.save(transaction);
+
+        // wallet.setBalance(wallet.getBalance() - totalCharge);
+        // List<WalletTransaction> transactions = wallet.getTransactions();
+        // transactions.add(transaction);
+        // wallet.setTransactions(transactions);
+        // walletRepository.save(wallet);
+        walletService.debitBalance(userId, totalCharge, "Chat session with astrologer " + astrologer.getUser().getName() + " for "
                 + requestedMinutes + " minutes.");
 
-        transaction = walletTransactionRepository.save(transaction);
-
-        wallet.setBalance(wallet.getBalance() - totalCharge);
-        List<WalletTransaction> transactions = wallet.getTransactions();
-        transactions.add(transaction);
-        wallet.setTransactions(transactions);
-        walletRepository.save(wallet);
-        // transaction.setWallet(wallet);
-        // walletTransactionRepository.save(transaction);
-
         // Credit amount to astrologer's wallet
-        WalletTransaction astrologerTransaction = new WalletTransaction();
-        astrologerTransaction.setAmount(totalCharge);
-        astrologerTransaction.setType(TransactionType.CREDIT);
-        astrologerTransaction.setWallet(astrologerWallet);
-        astrologerTransaction
-                .setDescription("Chat session with user " + user.getName() + " for " + requestedMinutes + " minutes.");
-        astrologerTransaction = walletTransactionRepository.save(astrologerTransaction);
-
-        astrologerWallet.setBalance(astrologerWallet.getBalance() + totalCharge);
-        List<WalletTransaction> astrologerTransactions = astrologerWallet.getTransactions();
-        astrologerTransactions.add(astrologerTransaction);
-        astrologerWallet.setTransactions(astrologerTransactions);
-        walletRepository.save(astrologerWallet);
+        // WalletTransaction astrologerTransaction = new WalletTransaction();
+        // astrologerTransaction.setAmount(totalCharge);
+        // astrologerTransaction.setType(TransactionType.CREDIT);
         // astrologerTransaction.setWallet(astrologerWallet);
-        // walletTransactionRepository.save(astrologerTransaction);
+        // astrologerTransaction
+        //         .setDescription("Chat session with user " + user.getName() + " for " + requestedMinutes + " minutes.");
+        // astrologerTransaction = walletTransactionRepository.save(astrologerTransaction);
+
+        // astrologerWallet.setBalance(astrologerWallet.getBalance() + totalCharge);
+        // List<WalletTransaction> astrologerTransactions = astrologerWallet.getTransactions();
+        // astrologerTransactions.add(astrologerTransaction);
+        // astrologerWallet.setTransactions(astrologerTransactions);
+        // walletRepository.save(astrologerWallet);
+        walletService.creditBalance(astrologerId, totalCharge, "Chat session with user " + user.getName() + " for " + requestedMinutes + " minutes.");
 
         ChatSession session = ChatSession.builder()
                 .user(user)
                 .astrologer(astrologer.getUser())
                 .startedAt(LocalDateTime.now())
                 .status(ChatStatus.ACTIVE)
-                // .perMinuteRate(perMinuteRate)
                 .totalCost(totalCharge)
                 .totalMinutes(requestedMinutes)
                 .messages(List.of())

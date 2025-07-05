@@ -5,6 +5,7 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -14,16 +15,20 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.kss.astrologer.dto.AstrologerDto;
 import com.kss.astrologer.dto.WalletDto;
 import com.kss.astrologer.handler.ResponseHandler;
+import com.kss.astrologer.models.Wallet;
+import com.kss.astrologer.models.WalletTransaction;
 import com.kss.astrologer.request.AddBalanceRequest;
 import com.kss.astrologer.request.AstrologerRequest;
 import com.kss.astrologer.services.AdminService;
 import com.kss.astrologer.services.AstrologerService;
 import com.kss.astrologer.services.UserService;
+import com.kss.astrologer.services.WalletService;
 
 import jakarta.validation.Valid;
 
@@ -42,6 +47,9 @@ public class AdminController {
 
     @Autowired
     private AdminService adminService;
+
+    @Autowired
+    private WalletService walletService;
 
     @GetMapping("/create-admin")
     public ResponseEntity<Object> createAdmin() {
@@ -71,5 +79,23 @@ public class AdminController {
         WalletDto wallet = adminService.addBalanceInUserWallet(request.getMobile(), request.getAmount());
         logger.info("transactions: " + wallet.getTransactions().size());
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Balance added successfully", "wallet", wallet);
+    }
+
+    @GetMapping("/wallet/{userId}")
+    public ResponseEntity<Object> getWalletDetails(
+            @PathVariable UUID userId,
+            @RequestParam(value = "page", defaultValue = "1", required = false) Integer page,
+            @RequestParam(value = "size", defaultValue = "10", required = false) Integer size) {
+        Wallet wallet = walletService.getWalletByUserId(userId);
+        if (wallet == null) {
+            return ResponseHandler.responseBuilder(HttpStatus.NOT_FOUND, false, "Wallet not found");
+        }
+        Page<WalletTransaction> transactions = walletService.getTransaction(wallet.getId(), page, size);
+        wallet.setTransactions(transactions.getContent());
+        WalletDto walletDto = new WalletDto(wallet);
+
+        return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Wallet details fetched successfully", "wallet",
+                walletDto, transactions.getNumber() + 1, transactions.getTotalPages(), transactions.getTotalElements(),
+                transactions.isLast());
     }
 }

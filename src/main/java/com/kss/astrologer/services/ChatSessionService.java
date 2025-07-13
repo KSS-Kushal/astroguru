@@ -9,6 +9,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 
+import com.kss.astrologer.types.SessionType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,9 +57,6 @@ public class ChatSessionService {
     @Autowired
     private WalletRepository walletRepository;
 
-    // @Autowired
-    // private WalletTransactionRepository walletTransactionRepository;
-
     @Autowired
     private WalletService walletService;
 
@@ -88,7 +86,7 @@ public class ChatSessionService {
         if (wallet.getBalance().compareTo(totalCharge) < 0) {
             throw new CustomException("Not enough balance for " + requestedMinutes + " minutes.");
         }
-        queueService.enqueue(astrologerId, userId, requestedMinutes);
+        queueService.enqueue(astrologerId, userId, requestedMinutes, SessionType.CHAT);
         long pos = queueService.getPosition(astrologerId, userId);
         messagingTemplate.convertAndSend("/topic/queue/" + astrologerId, "New chat request received");
         return pos + 1;
@@ -253,7 +251,7 @@ public class ChatSessionService {
     }
 
     private void startTimer(UUID sessionId, int duration) {
-        final long[] remainingSeconds = { duration * 60L };
+        final long[] remainingSeconds = {duration * 60L};
 
         ScheduledFuture<?> future = taskScheduler.scheduleAtFixedRate(() -> {
             if (remainingSeconds[0] <= 0) {
@@ -263,7 +261,6 @@ public class ChatSessionService {
                 cancelTimer(sessionId); // Cancel timer
                 return;
             }
-            logger.info("Timer: " + remainingSeconds[0] + " " + formatTime(remainingSeconds[0]));
             messagingTemplate.convertAndSend("/topic/chat/" + sessionId + "/timer", formatTime(remainingSeconds[0]));
             remainingSeconds[0] -= 1;
 
@@ -282,8 +279,8 @@ public class ChatSessionService {
     }
 
     private String formatTime(long totalSeconds) {
-    long minutes = totalSeconds / 60;
-    long seconds = totalSeconds % 60;
-    return String.format("%02d:%02d", minutes, seconds);
-}
+        long minutes = totalSeconds / 60;
+        long seconds = totalSeconds % 60;
+        return String.format("%02d:%02d", minutes, seconds);
+    }
 }

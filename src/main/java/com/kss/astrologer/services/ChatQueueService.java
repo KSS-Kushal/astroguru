@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import com.kss.astrologer.types.SessionType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
@@ -30,8 +31,8 @@ public class ChatQueueService {
         return "chat_queue:" + astrologerId;
     }
 
-    private String formatEntry(UUID userId, int minutes) {
-        return userId + ":" + minutes;
+    private String formatEntry(UUID userId, int minutes, SessionType sessionType) {
+        return userId + ":" + minutes + ":" + sessionType;
     }
 
     public UUID parseUserId(String entry) {
@@ -42,8 +43,16 @@ public class ChatQueueService {
         return Integer.parseInt(entry.split(":")[1]);
     }
 
-    public void enqueue(UUID astrologerId, UUID userId, int requestedMinutes) {
-        redisTemplate.opsForList().rightPush(getQueueKey(astrologerId), formatEntry(userId, requestedMinutes));
+    public SessionType parseSessionType(String entry) {
+        return SessionType.valueOf(entry.split(":")[2]);
+    }
+
+    public ChatQueueEntry parseEntry(String entry) {
+        return new ChatQueueEntry(parseUserId(entry), parseRequestedMinutes(entry), parseSessionType(entry));
+    }
+
+    public void enqueue(UUID astrologerId, UUID userId, int requestedMinutes, SessionType sessionType) {
+        redisTemplate.opsForList().rightPush(getQueueKey(astrologerId), formatEntry(userId, requestedMinutes, sessionType));
     }
 
     public String dequeue(UUID astrologerId) {
@@ -60,7 +69,7 @@ public class ChatQueueService {
             return new ArrayList<>();
 
         return rawEntries.stream()
-                .map(entry -> new ChatQueueEntry(parseUserId(entry), parseRequestedMinutes(entry)))
+                .map(entry -> parseEntry(entry))
                 .collect(Collectors.toList());
     }
 

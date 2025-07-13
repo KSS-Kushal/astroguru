@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ChatMessageDto {
     private UUID sessionId;
-    private MessageType type; // "TEXT" or "IMAGE"
+    private MessageType type; // "CHAT" or "IMAGE"
     private UUID senderId;
     private UUID receiverId;
     private String message; // message or base64 image URL

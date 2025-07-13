@@ -25,22 +25,27 @@ public class S3ServiceImpl implements S3Service {
             .ignoreIfMissing()
             .load();
 
-    private String bucketName = dotenv.get("S3_BUCKET_NAME");
+    private final String bucketName = dotenv.get("S3_BUCKET_NAME");
 
-    private String s3BaseUrl = dotenv.get("S3_ENDPOINT_URL");
+    private final String s3BaseUrl = dotenv.get("S3_ENDPOINT_URL");
 
     @Autowired
     private S3Client s3Client;
 
     @Override
     public String uploadFile(MultipartFile file) {
-        String fileKey = "astrologers/" + UUID.randomUUID() + "_" + file.getOriginalFilename();
+        String fileName = file.getOriginalFilename();
+        String extension = "";
 
+        if (fileName != null && fileName.contains(".")) {
+            extension = fileName.substring(fileName.lastIndexOf(".") + 1);
+        }
+        String fileKey = "astrologers/" + UUID.randomUUID() + "." + extension;
         try {
             PutObjectRequest putRequest = PutObjectRequest.builder()
                     .bucket(bucketName)
                     .key(fileKey)
-                    .acl(ObjectCannedACL.PUBLIC_READ) // Publicly accessible
+//                    .acl(ObjectCannedACL.PUBLIC_READ) // Publicly accessible
                     .contentType(file.getContentType())
                     .build();
 

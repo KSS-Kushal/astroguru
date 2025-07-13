@@ -2,6 +2,8 @@ package com.kss.astrologer.controllers;
 
 import java.util.UUID;
 
+import com.kss.astrologer.models.Bannar;
+import com.kss.astrologer.services.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,10 +30,6 @@ import com.kss.astrologer.models.Wallet;
 import com.kss.astrologer.models.WalletTransaction;
 import com.kss.astrologer.request.AddBalanceRequest;
 import com.kss.astrologer.request.AstrologerRequest;
-import com.kss.astrologer.services.AdminService;
-import com.kss.astrologer.services.AstrologerService;
-import com.kss.astrologer.services.UserService;
-import com.kss.astrologer.services.WalletService;
 import com.kss.astrologer.services.aws.S3Service;
 
 import jakarta.validation.Valid;
@@ -58,6 +56,9 @@ public class AdminController {
     @Autowired
     private S3Service s3Service;
 
+    @Autowired
+    private BannarService bannarService;
+
     @GetMapping("/create-admin")
     public ResponseEntity<Object> createAdmin() {
         final String mobile = "9749610532";
@@ -71,7 +72,9 @@ public class AdminController {
     public ResponseEntity<Object> createAstrologer(
         @RequestPart("data") @Valid AstrologerRequest astrologerRequest,
         @RequestPart("image") MultipartFile imageFile) {
+            logger.info("running create astrologer");
         String imgUrl = s3Service.uploadFile(imageFile);
+        logger.info("imgUrl = " + imgUrl);
         AstrologerDto astrologer = astrologerService.createAstrologer(astrologerRequest, imgUrl);
         logger.info("Astrologer created successfully: {}", astrologer.getUser().getMobile());
         return ResponseHandler.responseBuilder(HttpStatus.CREATED, true, "Astrologer created successfully", "astrologer", astrologer);
@@ -107,5 +110,17 @@ public class AdminController {
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Wallet details fetched successfully", "wallet",
                 walletDto, transactions.getNumber() + 1, transactions.getTotalPages(), transactions.getTotalElements(),
                 transactions.isLast());
+    }
+
+    @PostMapping(value = "upload-bannar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Object> uploadBannar(@RequestPart("image") MultipartFile imageFile) {
+        Bannar bannar = bannarService.uploadBannar(imageFile);
+        return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Bannar Uploaded Successfully", "bannar", bannar);
+    }
+
+    @DeleteMapping("/bannar/{id}")
+    public ResponseEntity<Object> deleteBannar(@PathVariable UUID id) {
+        Bannar bannar = bannarService.deleteBannar(id);
+        return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Bannar Deleted Successfully", "bannar", bannar);
     }
 }

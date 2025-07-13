@@ -33,14 +33,14 @@ public class S3ServiceImpl implements S3Service {
     private S3Client s3Client;
 
     @Override
-    public String uploadFile(MultipartFile file) {
+    public String uploadFile(MultipartFile file, String location) {
         String fileName = file.getOriginalFilename();
         String extension = "";
 
         if (fileName != null && fileName.contains(".")) {
             extension = fileName.substring(fileName.lastIndexOf(".") + 1);
         }
-        String fileKey = "astrologers/" + UUID.randomUUID() + "." + extension;
+        String fileKey = location + "/" + UUID.randomUUID() + "." + extension;
         try {
             PutObjectRequest putRequest = PutObjectRequest.builder()
                     .bucket(bucketName)

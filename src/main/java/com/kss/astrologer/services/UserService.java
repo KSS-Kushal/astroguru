@@ -19,7 +19,7 @@ import com.kss.astrologer.types.Role;
 
 @Service
 public class UserService {
-    
+
     @Autowired
     private UserRepository userRepository;
 
@@ -33,43 +33,44 @@ public class UserService {
     @Transactional
     public User getOrCreateUser(String mobile) {
         return userRepository.findByMobile(mobile).orElseGet(() ->
-                {
-                    Wallet wallet = new Wallet();
-                    wallet.setBalance(0.0);
-                    wallet = walletRepository.save(wallet);
-                    User user = userRepository.save(User.builder()
-                        .mobile(mobile)
-                        .role(Role.USER)
-                        .wallet(wallet)
-                        .imgUri("https://img.freepik.com/free-vector/young-man-orange-hoodie_1308-175788.jpg?ga=GA1.1.1570607994.1749976697&semt=ais_hybrid&w=740")
-                        .createdAt(LocalDateTime.now())
-                        .updatedAt(LocalDateTime.now())
-                        .build());
-                    wallet.setUser(user);
-                    walletRepository.save(wallet);
-                    return user;
-                });
+        {
+            Wallet wallet = new Wallet();
+            wallet.setBalance(0.0);
+            wallet = walletRepository.save(wallet);
+            User user = userRepository.save(User.builder()
+                    .mobile(mobile)
+                    .role(Role.USER)
+                    .isFreeChatUsed(false)
+                    .wallet(wallet)
+                    .imgUri("https://img.freepik.com/free-vector/young-man-orange-hoodie_1308-175788.jpg?ga=GA1.1.1570607994.1749976697&semt=ais_hybrid&w=740")
+                    .createdAt(LocalDateTime.now())
+                    .updatedAt(LocalDateTime.now())
+                    .build());
+            wallet.setUser(user);
+            walletRepository.save(wallet);
+            return user;
+        });
     }
 
     @Transactional
     public User getOrCreateAdmin(String mobile) {
         return userRepository.findByMobile(mobile).orElseGet(() ->
-                {
-                    Wallet wallet = new Wallet();
-                    wallet.setBalance(0.0);
-                    wallet = walletRepository.save(wallet);
-                    User user = userRepository.save(User.builder()
-                        .mobile(mobile)
-                        .role(Role.ADMIN)
-                        .createdAt(LocalDateTime.now())
-                        .updatedAt(LocalDateTime.now())
-                        .build());
-                    wallet.setUser(user);
-                    walletRepository.save(wallet);
-                    return user;
-                });
+        {
+            Wallet wallet = new Wallet();
+            wallet.setBalance(0.0);
+            wallet = walletRepository.save(wallet);
+            User user = userRepository.save(User.builder()
+                    .mobile(mobile)
+                    .role(Role.ADMIN)
+                    .createdAt(LocalDateTime.now())
+                    .updatedAt(LocalDateTime.now())
+                    .build());
+            wallet.setUser(user);
+            walletRepository.save(wallet);
+            return user;
+        });
     }
-    
+
     public UserDto getUserById(UUID id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "User not found"));

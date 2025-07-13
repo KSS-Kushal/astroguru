@@ -27,6 +27,7 @@ public class UserDto {
     private String imgUri;
     private Role role;
     private Double walletBalance;
+    private boolean isFreeChatUsed;
     
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -44,6 +45,7 @@ public class UserDto {
         this.imgUri = user.getImgUri();
         this.role = user.getRole();
         this.walletBalance = user.getWallet() != null ? user.getWallet().getBalance() : 0.0;
+        this.isFreeChatUsed = user.isFreeChatUsed();
         this.createdAt = user.getCreatedAt();
         this.updatedAt = user.getUpdatedAt();
     }

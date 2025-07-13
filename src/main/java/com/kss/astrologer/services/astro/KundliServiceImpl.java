@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
@@ -26,17 +25,22 @@ import org.springframework.web.client.RestTemplate;
 
 import com.kss.astrologer.request.KundliRequest;
 
+import io.github.cdimascio.dotenv.Dotenv;
+
 @Service
 public class KundliServiceImpl implements KundliService {
+
+    private final Dotenv dotenv = Dotenv.configure()
+            .ignoreIfMalformed()
+            .ignoreIfMissing()
+            .load();
 
     @Autowired
     private RestTemplate restTemplate;
 
-    @Value("${prokerala.api.client-id}")
-    private String clientId;
+    private String clientId = dotenv.get("PROKERALA_API_CLIENT_ID");
 
-    @Value("${prokerala.api.client-secret}")
-    private String clientSecret;
+    private String clientSecret = dotenv.get("PROKERALA_API_CLIENT_SECRET");
 
     private final String tokenUrl = "https://api.prokerala.com/token";
     private final String kundliUrl = "https://api.prokerala.com/v2/astrology/kundli";

@@ -4,10 +4,15 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort.Direction;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.kss.astrologer.dto.WalletDto;
+import com.kss.astrologer.exceptions.CustomException;
 import com.kss.astrologer.models.Wallet;
 import com.kss.astrologer.models.WalletTransaction;
 import com.kss.astrologer.repository.WalletRepository;
@@ -31,7 +36,7 @@ public class WalletService {
     public WalletDto creditBalance(UUID userId, double amount, String description) {
         Wallet wallet = walletRepository.findByUserId(userId).orElse(null);
         if (wallet == null) {
-            throw new RuntimeException("Wallet not found for user ID: " + userId);
+            throw new CustomException("Wallet not found for user ID: " + userId);
         }
         WalletTransaction transaction = new WalletTransaction();
         transaction.setWallet(wallet);
@@ -55,7 +60,7 @@ public class WalletService {
     public WalletDto debitBalance(UUID userId, double amount, String description) {
         Wallet wallet = walletRepository.findByUserId(userId).orElse(null);
         if (wallet == null) {
-            throw new RuntimeException("Wallet not found for user ID: " + userId);
+            throw new CustomException("Wallet not found for user ID: " + userId);
         }
         WalletTransaction transaction = new WalletTransaction();
         transaction.setWallet(wallet);
@@ -72,5 +77,10 @@ public class WalletService {
         wallet = walletRepository.save(wallet);
         
         return new WalletDto(wallet);
+    }
+
+    public Page<WalletTransaction> getTransaction(UUID walletId, Integer page, Integer size) {
+        Pageable pageable = PageRequest.of(page - 1, size, Direction.DESC, "timestamp");
+        return walletTransactionRepository.findByWalletId(walletId, pageable);
     }
 }

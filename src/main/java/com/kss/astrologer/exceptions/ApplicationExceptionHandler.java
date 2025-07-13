@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 
 import com.kss.astrologer.handler.ResponseHandler;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @RestControllerAdvice
 public class ApplicationExceptionHandler {
@@ -36,7 +37,13 @@ public class ApplicationExceptionHandler {
             ));
         return ResponseHandler.responseBuilder(HttpStatus.BAD_REQUEST, false, "Bad Request", "errors", errors);
     }
-    
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<Object> handleMaxSizeException(MaxUploadSizeExceededException ex) {
+        return ResponseHandler.responseBuilder(HttpStatus.PAYLOAD_TOO_LARGE, false, "File size exceeds limit");
+    }
+
+
     @ExceptionHandler(CustomException.class)
     public ResponseEntity<Object> handleCustomException(CustomException ex, WebRequest request) {
         logger.warn("CustomException at [{}]: {}", request.getDescription(false), ex.getMessage());

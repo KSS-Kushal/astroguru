@@ -55,6 +55,8 @@ public class User {
     @Enumerated(EnumType.STRING)
     private Role role; // USER, ASTROLOGER, ADMIN
 
+    private boolean isFreeChatUsed; // Only for USER
+
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private Wallet wallet;
 

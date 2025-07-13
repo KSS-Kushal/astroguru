@@ -28,7 +28,7 @@ public class BannarService {
                 deleteBannar(b.getId());
             });
         }
-        String imgUrl = s3Service.uploadFile(file);
+        String imgUrl = s3Service.uploadFile(file, "bannar");
         Bannar bannar = new Bannar();
         bannar.setImgUrl(imgUrl);
         return bannarRepository.save(bannar);

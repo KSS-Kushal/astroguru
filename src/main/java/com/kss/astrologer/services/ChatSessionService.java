@@ -73,15 +73,21 @@ public class ChatSessionService {
 
 
     public long requestChat(UUID userId, UUID astrologerId, int requestedMinutes) {
+        if (requestedMinutes < 5 && requestedMinutes != 2) {
+            throw new CustomException("Minimum chat duration is 5 minutes.");
+        }
+
+        User user = userRepository.findById(userId).orElseThrow(() -> new CustomException("User not found"));
         AstrologerDetails astrologer = astrologerRepository.findByUserId(astrologerId)
                 .orElseThrow(() -> new CustomException("Astrologer not found"));
 
+        boolean isFreeChat = !user.isFreeChatUsed();
         Double perMinuteRate = astrologer.getPricePerMinuteChat();
         Wallet wallet = walletService.getWalletByUserId(userId);
         if (wallet == null) {
             throw new CustomException("Wallet not found for user ID: " + userId);
         }
-        Double totalCharge = perMinuteRate * requestedMinutes;
+        Double totalCharge = isFreeChat ? 0.0 : perMinuteRate * requestedMinutes;
 
         if (wallet.getBalance().compareTo(totalCharge) < 0) {
             throw new CustomException("Not enough balance for " + requestedMinutes + " minutes.");
@@ -101,14 +107,13 @@ public class ChatSessionService {
         int duration = queueService.parseRequestedMinutes(entry);
 
         startChat(userId, astrologerId, duration);
-        // schedulerService.scheduleChatEnd(astrologerId, userId, duration);
 
         return "Chat accepted and started.";
     }
 
     @Transactional
     public void startChat(UUID userId, UUID astrologerId, int requestedMinutes) {
-        if (requestedMinutes < 5) {
+        if (requestedMinutes < 5 && requestedMinutes != 2) {
             throw new CustomException("Minimum chat duration is 5 minutes.");
         }
 
@@ -122,8 +127,9 @@ public class ChatSessionService {
         AstrologerDetails astrologer = astrologerRepository.findByUserId(astrologerId)
                 .orElseThrow(() -> new CustomException("Astrologer not found"));
 
+        boolean isFreeChat = !user.isFreeChatUsed();
         Double perMinuteRate = astrologer.getPricePerMinuteChat();
-        Double totalCharge = perMinuteRate * requestedMinutes;
+        Double totalCharge = isFreeChat ? 0.0 : perMinuteRate * requestedMinutes;
 
         Wallet wallet = user.getWallet();
         // Wallet astrologerWallet = astrologer.getUser().getWallet();
@@ -139,6 +145,11 @@ public class ChatSessionService {
 
         if (wallet.getBalance().compareTo(totalCharge) < 0) {
             throw new CustomException("Not enough balance for " + requestedMinutes + " minutes.");
+        }
+
+        if(isFreeChat) {
+            user.setFreeChatUsed(true);
+            userRepository.save(user);
         }
 
         // Deduct wallet amount from user

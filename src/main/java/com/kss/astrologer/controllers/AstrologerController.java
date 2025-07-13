@@ -61,7 +61,7 @@ public class AstrologerController {
             @RequestPart(value = "image", required = false) MultipartFile imageFile) {
         String imgUrl = null;
         if (imageFile != null && !imageFile.isEmpty()) {
-            imgUrl = s3Service.uploadFile(imageFile);
+            imgUrl = s3Service.uploadFile(imageFile, "astrologers");
         }
         AstrologerDto updatedAstrologer = astrologerService.updateAstrologer(astrologerRequest, id, imgUrl);
         logger.info("Updated Astrologer details for ID: {}", id);

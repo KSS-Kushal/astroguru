@@ -73,7 +73,7 @@ public class AdminController {
         @RequestPart("data") @Valid AstrologerRequest astrologerRequest,
         @RequestPart("image") MultipartFile imageFile) {
             logger.info("running create astrologer");
-        String imgUrl = s3Service.uploadFile(imageFile);
+        String imgUrl = s3Service.uploadFile(imageFile, "astrologers");
         logger.info("imgUrl = " + imgUrl);
         AstrologerDto astrologer = astrologerService.createAstrologer(astrologerRequest, imgUrl);
         logger.info("Astrologer created successfully: {}", astrologer.getUser().getMobile());

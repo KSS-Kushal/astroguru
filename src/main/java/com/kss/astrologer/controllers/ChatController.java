@@ -100,7 +100,7 @@ public class ChatController {
 
     @PostMapping(value = "/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Object> uploadImageInChat(@RequestPart("image") MultipartFile imageFile) {
-        String imgUrl = s3Service.uploadFile(imageFile);
+        String imgUrl = s3Service.uploadFile(imageFile, "chat");
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Image Uploaded Successfully", "imgUrl", imgUrl);
     }
 }

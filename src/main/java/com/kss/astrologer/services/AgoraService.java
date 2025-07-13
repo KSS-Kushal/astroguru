@@ -11,8 +11,8 @@ public class AgoraService {
             .ignoreIfMissing()
             .load();
 
-    private final String appId = "your-agora-app-id";
-    private final String appCertificate = "your-app-certificate";
+    private final String appId = dotenv.get("AGORA_APP_ID");
+    private final String appCertificate = dotenv.get("AGORA_APP_CERTIFICATE");
 
     public String generateToken(String channelName, String uid, int requestedMinutes) {
         int expireTimeInSeconds = requestedMinutes * 60;

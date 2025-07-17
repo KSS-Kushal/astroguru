@@ -39,9 +39,11 @@ public class AstrologerController {
     private S3Service s3Service;
 
     @GetMapping
-    public ResponseEntity<Object> getAllAstrologers(@RequestParam(value = "page", defaultValue = "1") Integer page,
-            @RequestParam(value = "size", defaultValue = "10") Integer size) {
-        Page<AstrologerDto> astrologers = astrologerService.getAllAstrologers(page, size);
+    public ResponseEntity<Object> getAllAstrologers(@RequestParam(defaultValue = "1", required = false) Integer page,
+                                                    @RequestParam(defaultValue = "10", required = false) Integer size,
+                                                    @RequestParam(required = false) String search,
+                                                    @RequestParam(required = false) String sort) {
+        Page<AstrologerDto> astrologers = astrologerService.getAllAstrologers(page, size, search, sort);
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Successfully fetched astrologers", "astrologers",
                 astrologers);
     }

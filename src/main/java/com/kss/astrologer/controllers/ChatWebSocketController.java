@@ -2,6 +2,8 @@ package com.kss.astrologer.controllers;
 
 import java.time.LocalDateTime;
 
+import com.kss.astrologer.request.ChatLeave;
+import com.kss.astrologer.services.ChatQueueService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -25,6 +27,9 @@ public class ChatWebSocketController {
 
     @Autowired
     private ChatSessionService chatSessionService;
+
+    @Autowired
+    private ChatQueueService chatQueueService;
 
     @Autowired
     private UserService userService;
@@ -58,8 +63,14 @@ public class ChatWebSocketController {
 
     @MessageMapping("/chat.typing")
     public void handleTyping(@Payload TypingIndicator typingIndicator) {
-        System.out.println(typingIndicator);
         messagingTemplate.convertAndSend("/topic/chat/" + typingIndicator.getReceiverId() + "/typing", typingIndicator);
+    }
+
+    @MessageMapping("/chat.leave")
+    public void userLeave(@Payload ChatLeave chatLeave) {
+        chatQueueService.removeUser(chatLeave.getAstrologerId(), chatLeave.getUserId());
+        messagingTemplate.convertAndSend("/topic/queue/" + chatLeave.getUserId(), "Exited from waiting list");
+        messagingTemplate.convertAndSend("/topic/queue/" + chatLeave.getAstrologerId(), "One user exited from waiting list");
     }
 
 }

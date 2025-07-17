@@ -27,8 +27,9 @@ public class KundliController {
     private KundliService kundliService;
 
     @PostMapping
-    public ResponseEntity<Object> generateKundli(@RequestBody @Valid KundliRequest kundliRequest) {
-        Object kundli = kundliService.getKundli(kundliRequest);
+    public ResponseEntity<Object> generateKundli(@RequestBody @Valid KundliRequest kundliRequest,
+                                                 @RequestParam(required = false, defaultValue = "en") String language) {
+        Object kundli = kundliService.getKundli(kundliRequest, language);
         if (kundli == null) {
             logger.error("Kundli generation failed for request: {}", kundliRequest);
             return ResponseHandler.responseBuilder(HttpStatus.BAD_REQUEST, false,"Kundli generation failed");
@@ -39,9 +40,10 @@ public class KundliController {
 
     @PostMapping(value = "/chart", produces = "image/svg+xml")
     public ResponseEntity<String> getChartSvg(@Valid @RequestBody KundliRequest req,
-                                              @RequestParam String chartType,
-                                              @RequestParam String chartStyle) {
-        String svgXml = kundliService.getChart(req, chartType, chartStyle);
+                                              @RequestParam(required = false, defaultValue = "D1") String chartType,
+                                              @RequestParam(required = false, defaultValue = "east") String chartStyle,
+                                              @RequestParam(required = false, defaultValue = "en") String language) {
+        String svgXml = kundliService.getChart(req, chartType, chartStyle, language);
         return ResponseEntity.ok(svgXml);
     }
 }

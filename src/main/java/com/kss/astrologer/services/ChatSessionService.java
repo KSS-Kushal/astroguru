@@ -111,6 +111,15 @@ public class ChatSessionService {
         return "Chat accepted and started.";
     }
 
+    public String skipChat(UUID userId, UUID astrologerId) {
+        if (!queueService.isNextInQueue(astrologerId, userId)) {
+            return "User is not first in the queue.";
+        }
+        queueService.dequeue(astrologerId);
+        messagingTemplate.convertAndSend("/topic/queue/" + userId, "Sorry, Astrologer is not available");
+        return "Request skipped successfully";
+    }
+
     @Transactional
     public void startChat(UUID userId, UUID astrologerId, int requestedMinutes) {
         if (requestedMinutes < 5 && requestedMinutes != 2) {

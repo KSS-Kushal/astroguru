@@ -112,7 +112,7 @@ public class AdminController {
                 transactions.isLast());
     }
 
-    @PostMapping(value = "upload-bannar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/upload-bannar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Object> uploadBannar(@RequestPart("image") MultipartFile imageFile) {
         Bannar bannar = bannarService.uploadBannar(imageFile);
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Bannar Uploaded Successfully", "bannar", bannar);

@@ -3,6 +3,7 @@ package com.kss.astrologer.services;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kss.astrologer.dto.CallSessionDto;
 import com.kss.astrologer.dto.ChatQueueEntry;
+import com.kss.astrologer.dto.QueueNotificationDto;
 import com.kss.astrologer.exceptions.CustomException;
 import com.kss.astrologer.models.*;
 import com.kss.astrologer.repository.AstrologerRepository;
@@ -70,6 +71,7 @@ public class CallSessionService {
     private final Map<UUID, ScheduledFuture<?>> timerTasks = new ConcurrentHashMap<>();
 
     public long requestCall(UUID userId, UUID astrologerId, int requestedMinutes, SessionType type) {
+        logger.info("Duration: " + requestedMinutes);
         AstrologerDetails astrologer = astrologerRepository.findByUserId(astrologerId)
                 .orElseThrow(() -> new CustomException("Astrologer not found"));
 
@@ -85,7 +87,8 @@ public class CallSessionService {
         }
         queueService.enqueue(astrologerId, userId, requestedMinutes, type);
         long pos = queueService.getPosition(astrologerId, userId);
-        messagingTemplate.convertAndSend("/topic/queue/" + astrologerId, "New " + type.name() + " call request received");
+        QueueNotificationDto queueNotificationDto = new QueueNotificationDto(userId, type, "New " + type.name() + " call request received");
+        messagingTemplate.convertAndSend("/topic/queue/" + astrologerId, queueNotificationDto);
         return pos + 1;
     }
 
@@ -106,13 +109,21 @@ public class CallSessionService {
 
     @Transactional
     public void startCall(UUID userId, UUID astrologerId, int requestedMinutes, SessionType type) {
-        if (requestedMinutes < 5) {
-            throw new CustomException("Minimum chat duration is 5 minutes.");
-        }
+//        if (requestedMinutes < 5) {
+//            throw new CustomException("Minimum chat duration is 5 minutes.");
+//        }
 
         Optional<CallSession> existing = callSessionRepo.findByAstrologerIdAndStatus(astrologerId, ChatStatus.ACTIVE);
         if (existing.isPresent()) {
             logger.warn("Call already active for astrologer: {}", astrologerId);
+            CallSessionDto existingSessionDto = new CallSessionDto(existing.get());
+
+            System.out.println(existingSessionDto);
+            // Send session info to frontend
+            if(existingSessionDto.getUser().getId() == userId && existingSessionDto.getAstrologer().getId() == astrologerId) {
+                messagingTemplate.convertAndSend("/topic/call/" + userId + "/session", existingSessionDto);
+                messagingTemplate.convertAndSend("/topic/call/" + astrologerId + "/session", existingSessionDto);
+            }
             return; // Prevent duplicate start
         }
 
@@ -146,7 +157,7 @@ public class CallSessionService {
         walletService.creditBalance(astrologerId, totalCharge, type.name() + " Call session with user " + user.getName() + " for " + requestedMinutes + " minutes.");
 
         String channelName = UUID.randomUUID().toString();
-        String token = agoraService.generateToken(channelName, userId.toString(), requestedMinutes);
+//        String token = agoraService.generateToken(channelName, userId.toString(), requestedMinutes);
 
         CallSession session = CallSession.builder()
                 .user(user)
@@ -157,12 +168,13 @@ public class CallSessionService {
                 .totalCost(totalCharge)
                 .sessionType(type)
                 .agoraChannelName(channelName)
-                .agoraToken(token)
+//                .agoraToken(token)
                 .build();
 
         CallSession createdSession = callSessionRepo.save(session);
         CallSessionDto createdSessionDto = new CallSessionDto(createdSession);
 
+        System.out.println(createdSessionDto);
         // Send session info to frontend
         messagingTemplate.convertAndSend("/topic/call/" + userId + "/session", createdSessionDto);
         messagingTemplate.convertAndSend("/topic/call/" + astrologerId + "/session", createdSessionDto);
@@ -189,7 +201,9 @@ public class CallSessionService {
         UUID astrologerId = session.getAstrologer().getId();
         String nextUser = queueService.peek(astrologerId);
         if (nextUser != null) {
-            messagingTemplate.convertAndSend("/topic/queue/" + astrologerId, "Call ended, next user can be served");
+            ChatQueueEntry queueEntry = queueService.parseEntry(nextUser);
+            QueueNotificationDto queueNotificationDto = new QueueNotificationDto(queueEntry.getUserId(), queueEntry.getSessionType(), "Call ended, next user can be served");
+            messagingTemplate.convertAndSend("/topic/queue/" + astrologerId, queueNotificationDto);
         }
     }
 
@@ -203,16 +217,27 @@ public class CallSessionService {
     private void startTimer(UUID sessionId, int duration) {
         final long[] remainingSeconds = {duration * 60L};
 
-        ScheduledFuture<?> future = taskScheduler.scheduleAtFixedRate(() -> {
-            if (remainingSeconds[0] <= 0) {
-                endCall(sessionId);
-                cancelTimer(sessionId); // Cancel timer
-                return;
-            }
-            messagingTemplate.convertAndSend("/topic/call/" + sessionId + "/timer", formatTime(remainingSeconds[0]));
-            remainingSeconds[0] -= 1;
+        logger.info("SessionId: " + sessionId);
+        ScheduledFuture<?> future = null;
+        try {
+            future = taskScheduler.scheduleAtFixedRate(() -> {
+                if (remainingSeconds[0] <= 0) {
+                    endCall(sessionId);
+                    cancelTimer(sessionId); // Cancel timer
+                    return;
+                }
+                logger.info("timer: " + formatTime(remainingSeconds[0]));
+                messagingTemplate.convertAndSend("/topic/call/" + sessionId + "/timer", formatTime(remainingSeconds[0]));
+                remainingSeconds[0] -= 1;
 
-        }, Duration.ofSeconds(1));
+            }, Duration.ofSeconds(1));
+        } catch (Exception e) {
+            logger.error("Error in Call timer: ", e);
+        } finally {
+            if (future != null && !future.isCancelled()) {
+                future.cancel(false);
+            }
+        }
 
         // Store the scheduled task so we can cancel it later
         timerTasks.put(sessionId, future);

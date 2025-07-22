@@ -1,9 +1,15 @@
 package com.kss.astrologer.services.astro;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kss.astrologer.dto.HouseData;
 import com.kss.astrologer.dto.KundliChartDto;
 import com.kss.astrologer.exceptions.CustomException;
+import com.kss.astrologer.request.HoroscopeBasicAstroRequest;
 import com.kss.astrologer.request.HoroscopeChartRequest;
 import com.kss.astrologer.request.KundliRequest;
+import com.kss.astrologer.utils.EastIndianChartRenderer;
 import io.github.cdimascio.dotenv.Dotenv;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
@@ -13,6 +19,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+
+import java.util.Map;
 
 @Service
 public class DevinKundliService implements KundliService{
@@ -31,14 +39,17 @@ public class DevinKundliService implements KundliService{
     @Autowired
     private RestTemplate restTemplate;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
     @Override
     public String getAccessToken() {
         return apiToken;
     }
 
-    @Cacheable(value = "kundli", key = "#kundliRequest.latitude + '-' + #kundliRequest.longitude + '-' + #kundliRequest.birthDate + '-' + #kundliRequest.birthTime")
+//    @Cacheable(value = "kundli", key = "#kundliRequest.latitude + '-' + #kundliRequest.longitude + '-' + #kundliRequest.birthDate + '-' + #kundliRequest.birthTime")
     @Override
-    public Object getKundli(KundliRequest kundliRequest, String languageck) {
+    public Object getKundli(KundliRequest kundliRequest, String language) {
         int day = kundliRequest.getBirthDate().getDayOfMonth();
         int month = kundliRequest.getBirthDate().getMonthValue();
         int year = kundliRequest.getBirthDate().getYear();
@@ -52,7 +63,7 @@ public class DevinKundliService implements KundliService{
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(apiToken);
 
-        HoroscopeChartRequest body = new HoroscopeChartRequest();
+        HoroscopeBasicAstroRequest body = new HoroscopeBasicAstroRequest();
         body.setApi_key(apiKey);
         body.setFull_name(kundliRequest.getName());
         body.setGender(kundliRequest.getGender().name().toLowerCase());
@@ -66,9 +77,9 @@ public class DevinKundliService implements KundliService{
         body.setLat(kundliRequest.getLatitude().floatValue());
         body.setLon(kundliRequest.getLongitude().floatValue());
         body.setTzone((float) timezone);
-        body.setLan("en");
+        body.setLan(language);
 
-        HttpEntity<HoroscopeChartRequest> entity = new HttpEntity<>(body, headers);
+        HttpEntity<HoroscopeBasicAstroRequest> entity = new HttpEntity<>(body, headers);
 
         ResponseEntity<Object> response = restTemplate.postForEntity(
                 kundliUrl,
@@ -79,7 +90,7 @@ public class DevinKundliService implements KundliService{
         return response.getBody();
     }
 
-    @Cacheable(value = "chart", key = "#kundliRequest.latitude + '-' + #kundliRequest.longitude + '-' + #kundliRequest.birthDate + '-' + #kundliRequest.birthTime + '-' + #chartType + '-' + #chartStyle")
+//    @Cacheable(value = "chart", key = "#kundliRequest.latitude + '-' + #kundliRequest.longitude + '-' + #kundliRequest.birthDate + '-' + #kundliRequest.birthTime + '-' + #chartType + '-' + #chartStyle")
     @Override
     public String getChart(KundliRequest kundliRequest, String chartType, String chartStyle, String language) {
         String url = chartUrl + "/" + chartType;
@@ -113,17 +124,49 @@ public class DevinKundliService implements KundliService{
         body.setLat(kundliRequest.getLatitude().floatValue());
         body.setLon(kundliRequest.getLongitude().floatValue());
         body.setTzone((float) timezone);
-        body.setLan("en");
-        body.setChart_type(chartType);
+        body.setLan(chartStyle.equals("east")?"en":language);
+        body.setChart_type(chartStyle.equals("east")?"north":chartStyle);
 
         HttpEntity<HoroscopeChartRequest> entity = new HttpEntity<>(body, headers);
 
-        ResponseEntity<KundliChartDto> response = restTemplate.postForEntity(url, entity, KundliChartDto.class);
+        ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
 
-        if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-            return response.getBody().getData().getSvg();
+//        if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+//            System.out.println(response.getBody() + "response");
+//            if (response instanceof KundliChartDto ) {
+//                if(response.getBody().getData() == null) throw new CustomException("Failed to fetch chart svg");
+//                return response.getBody().getData().getSvg();
+//            }
+//        }
+        System.out.println(response.getBody());
+        try {
+            JsonNode root = objectMapper.readTree(response.getBody());
+
+            if(language.equals("bn") && chartStyle.equals("east")) {
+                // Step 1: get the JSON string from the `data.data` field
+                JsonNode dataString = root.path("data").path("data");
+                System.out.println("raw string" + dataString);
+                // Step 2: Convert JSON string to Map<String, HouseData>
+                Map<String, HouseData> chartData = objectMapper.convertValue(
+                        dataString,
+                        objectMapper.getTypeFactory().constructMapType(Map.class, String.class, HouseData.class)
+                );
+
+                System.out.println(chartData);
+                String svg = EastIndianChartRenderer.generateSvg(chartData, true);
+                System.out.println(svg);
+                return svg;
+            }
+
+            System.out.println("Go to another");
+            String svg = root.path("data").path("svg").asText();
+            return svg;
+
+        } catch (Exception e) {
+            e.printStackTrace(); // optional, for debugging
+            throw new CustomException("Failed to fetch chart svg");
         }
 
-        throw new CustomException("Failed to fetch chart svg");
+//        throw new CustomException("Failed to fetch chart svg");
     }
 }

@@ -18,7 +18,7 @@ public class AgoraService {
         int expireTimeInSeconds = requestedMinutes * 60;
         int timestamp = (int) (System.currentTimeMillis() / 1000 + expireTimeInSeconds);
         RtcTokenBuilder2 tokenBuilder = new RtcTokenBuilder2();
-        return tokenBuilder.buildTokenWithUid(appId, appCertificate, channelName, Integer.parseInt(uid),
+        return tokenBuilder.buildTokenWithUserAccount(appId, appCertificate, channelName, uid,
                 RtcTokenBuilder2.Role.ROLE_PUBLISHER, timestamp, timestamp);
     }
 }

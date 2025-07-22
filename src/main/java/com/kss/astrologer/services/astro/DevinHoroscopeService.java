@@ -28,14 +28,16 @@ public class DevinHoroscopeService implements HoroscopeService {
     @Autowired
     private RestTemplate restTemplate;
 
-    @Cacheable(value = "dailyHoroscope", key = "#sign + '-' + #day + '-' + #month + '-' + #year + '-' + #tzone + '-' + #lan")
+//    @Cacheable(value = "dailyHoroscope", key = "#sign + '-' + #day + '-' + #month + '-' + #year + '-' + #tzone + '-' + #lan")
     @Override
     public Object getDailyHoroscope(String sign, Integer day, Integer month, Integer year, Double tzone, String lan) {
         // Prepare headers
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(apiToken);
-
+//        headers.setBearerAuth(apiToken);
+        headers.set("authorization", "Bearer " + apiToken);
+        System.out.println(apiKey + " Api key " + apiToken);
+        System.out.println("url: " + dailyHoroscopeUrl);
         // Prepare body
         HoroscopeRequest request = new HoroscopeRequest();
         request.setApi_key(apiKey);
@@ -45,6 +47,9 @@ public class DevinHoroscopeService implements HoroscopeService {
         request.setYear(year);
         request.setTzone(tzone);
         request.setLan(lan); // e.g., "hi", "pt", "fr", etc.
+
+        System.out.println(request);
+        System.out.println(headers);
 
         HttpEntity<HoroscopeRequest> entity = new HttpEntity<>(request, headers);
 

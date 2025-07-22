@@ -3,7 +3,7 @@ package com.kss.astrologer.request;
 import lombok.Data;
 
 @Data
-public class HoroscopeChartRequest {
+public class HoroscopeBasicAstroRequest {
     private String api_key;
     private String full_name;
     private int day;
@@ -18,9 +18,9 @@ public class HoroscopeChartRequest {
     private float lon;
     private float tzone;
     private String lan = "en"; // Optional
-    private String planet_color = "#333333";
-    private String sign_color = "#333333";
-    private String line_color = "#FF0000";
-    private String chart_color = "#F8FF85";
-    private String chart_type = "east";
+//    private String planet_color;
+//    private String sign_color;
+//    private String line_color;
+//    private String chart_color;
+//    private String chart_type = "east";
 }

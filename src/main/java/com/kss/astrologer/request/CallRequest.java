@@ -17,7 +17,7 @@ public class CallRequest {
     @NotNull(message = "Astrologer ID cannot be null")
     private UUID astrologerId;
 
-    @Min(value = 5, message = "Minimum duration is 5 minutes")
+//    @Min(value = 5, message = "Minimum duration is 5 minutes")
     private int duration; // in minutes
 
     @NotNull(message = "Call type cannot be null")

@@ -138,28 +138,24 @@ public class DevinKundliService implements KundliService{
 //                return response.getBody().getData().getSvg();
 //            }
 //        }
-        System.out.println(response.getBody());
         try {
             JsonNode root = objectMapper.readTree(response.getBody());
 
             if(language.equals("bn") && chartStyle.equals("east")) {
                 // Step 1: get the JSON string from the `data.data` field
                 JsonNode dataString = root.path("data").path("data");
-                System.out.println("raw string" + dataString);
                 // Step 2: Convert JSON string to Map<String, HouseData>
                 Map<String, HouseData> chartData = objectMapper.convertValue(
                         dataString,
                         objectMapper.getTypeFactory().constructMapType(Map.class, String.class, HouseData.class)
                 );
 
-                System.out.println(chartData);
                 String svg = EastIndianChartRenderer.generateSvg(chartData, true);
-                System.out.println(svg);
                 return svg;
             }
 
-            System.out.println("Go to another");
             String svg = root.path("data").path("svg").asText();
+            System.out.println(svg);
             return svg;
 
         } catch (Exception e) {

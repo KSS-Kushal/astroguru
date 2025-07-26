@@ -233,7 +233,6 @@ public class CallSessionService {
             }, Duration.ofSeconds(1));
         } catch (Exception e) {
             logger.error("Error in Call timer: ", e);
-        } finally {
             if (future != null && !future.isCancelled()) {
                 future.cancel(false);
             }

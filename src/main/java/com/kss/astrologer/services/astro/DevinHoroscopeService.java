@@ -34,8 +34,8 @@ public class DevinHoroscopeService implements HoroscopeService {
         // Prepare headers
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-//        headers.setBearerAuth(apiToken);
-        headers.set("authorization", "Bearer " + apiToken);
+        headers.setBearerAuth(apiToken);
+//        headers.set("authorization", "Bearer " + apiToken);
         System.out.println(apiKey + " Api key " + apiToken);
         System.out.println("url: " + dailyHoroscopeUrl);
         // Prepare body
@@ -63,7 +63,7 @@ public class DevinHoroscopeService implements HoroscopeService {
         return response.getBody();
     }
 
-    @Cacheable(value = "weeklyHoroscope", key = "#sign + '-' + #week + '-' + #tzone + '-' + #lan + '-weekly'")
+//    @Cacheable(value = "weeklyHoroscope", key = "#sign + '-' + #week + '-' + #tzone + '-' + #lan + '-weekly'")
     @Override
     public Object getWeeklyHoroscope(String sign, String week, Double tzone, String lan) {
         // Headers

@@ -1,13 +1,12 @@
 package com.kss.astrologer.services.astro;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kss.astrologer.dto.HouseData;
-import com.kss.astrologer.dto.KundliChartDto;
 import com.kss.astrologer.exceptions.CustomException;
 import com.kss.astrologer.request.HoroscopeBasicAstroRequest;
 import com.kss.astrologer.request.HoroscopeChartRequest;
+import com.kss.astrologer.request.HoroscopeVimshottariRequest;
 import com.kss.astrologer.request.KundliRequest;
 import com.kss.astrologer.utils.EastIndianChartRenderer;
 import io.github.cdimascio.dotenv.Dotenv;
@@ -35,6 +34,7 @@ public class DevinKundliService implements KundliService{
 
     private final String chartUrl = "https://astroapi-3.divineapi.com/indian-api/v1/horoscope-chart";
     private final String kundliUrl = "https://astroapi-3.divineapi.com/indian-api/v2/basic-astro-details";
+    private final String vimshottariUrl = "https://astroapi-3.divineapi.com/indian-api/v1/vimshottari-dasha";
 
     @Autowired
     private RestTemplate restTemplate;
@@ -47,7 +47,7 @@ public class DevinKundliService implements KundliService{
         return apiToken;
     }
 
-//    @Cacheable(value = "kundli", key = "#kundliRequest.latitude + '-' + #kundliRequest.longitude + '-' + #kundliRequest.birthDate + '-' + #kundliRequest.birthTime")
+    @Cacheable(value = "kundli", key = "#kundliRequest.latitude + '-' + #kundliRequest.longitude + '-' + #kundliRequest.birthDate + '-' + #kundliRequest.birthTime + '-' + #language" )
     @Override
     public Object getKundli(KundliRequest kundliRequest, String language) {
         int day = kundliRequest.getBirthDate().getDayOfMonth();
@@ -90,7 +90,7 @@ public class DevinKundliService implements KundliService{
         return response.getBody();
     }
 
-//    @Cacheable(value = "chart", key = "#kundliRequest.latitude + '-' + #kundliRequest.longitude + '-' + #kundliRequest.birthDate + '-' + #kundliRequest.birthTime + '-' + #chartType + '-' + #chartStyle")
+    @Cacheable(value = "chart", key = "#kundliRequest.latitude + '-' + #kundliRequest.longitude + '-' + #kundliRequest.birthDate + '-' + #kundliRequest.birthTime + '-' + #chartType + '-' + #chartStyle + '-' + #language")
     @Override
     public String getChart(KundliRequest kundliRequest, String chartType, String chartStyle, String language) {
         String url = chartUrl + "/" + chartType;
@@ -155,14 +155,53 @@ public class DevinKundliService implements KundliService{
             }
 
             String svg = root.path("data").path("svg").asText();
-            System.out.println(svg);
             return svg;
 
         } catch (Exception e) {
-            e.printStackTrace(); // optional, for debugging
             throw new CustomException("Failed to fetch chart svg");
         }
 
 //        throw new CustomException("Failed to fetch chart svg");
+    }
+
+    @Override
+    @Cacheable(value = "vimshottariDasha", key = "#kundliRequest.latitude + '-' + #kundliRequest.longitude + '-' + #kundliRequest.birthDate + '-' + #kundliRequest.birthTime + '-' + #dashaType + '-' + #language")
+    public Object getVimshottariDasha(KundliRequest kundliRequest, String dashaType, String language) {
+        // Convert LocalDate and LocalTime to parts
+        int day = kundliRequest.getBirthDate().getDayOfMonth();
+        int month = kundliRequest.getBirthDate().getMonthValue();
+        int year = kundliRequest.getBirthDate().getYear();
+        int hour = kundliRequest.getBirthTime().getHour();
+        int minute = kundliRequest.getBirthTime().getMinute();
+        int second = kundliRequest.getBirthTime().getSecond();
+
+        double timezone = 5.5;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(apiToken);
+
+        // Prepare body
+        HoroscopeVimshottariRequest body = new HoroscopeVimshottariRequest();
+        body.setApi_key(apiKey);
+        body.setFull_name(kundliRequest.getName());
+        body.setGender(kundliRequest.getGender().name().toLowerCase());
+        body.setDay(day);
+        body.setMonth(month);
+        body.setYear(year);
+        body.setHour(hour);
+        body.setMin(minute);
+        body.setSec(second);
+        body.setPlace(kundliRequest.getBirthPlace());
+        body.setLat(kundliRequest.getLatitude().floatValue());
+        body.setLon(kundliRequest.getLongitude().floatValue());
+        body.setTzone((float) timezone);
+        body.setLan(language);
+        body.setDasha_type(dashaType);
+
+        HttpEntity<HoroscopeVimshottariRequest> entity = new HttpEntity<>(body, headers);
+
+        ResponseEntity<Object> response = restTemplate.postForEntity(vimshottariUrl, entity, Object.class);
+        return response.getBody();
     }
 }

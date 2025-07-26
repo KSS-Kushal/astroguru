@@ -20,7 +20,7 @@ import jakarta.validation.Valid;
 @RestController
 @RequestMapping("/api/v1/kundli")
 public class KundliController {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(KundliController.class);
 
     @Autowired
@@ -32,7 +32,7 @@ public class KundliController {
         Object kundli = kundliService.getKundli(kundliRequest, language);
         if (kundli == null) {
             logger.error("Kundli generation failed for request: {}", kundliRequest);
-            return ResponseHandler.responseBuilder(HttpStatus.BAD_REQUEST, false,"Kundli generation failed");
+            return ResponseHandler.responseBuilder(HttpStatus.BAD_REQUEST, false, "Kundli generation failed");
         }
         logger.info("Kundli generated successfully for request: {}", kundliRequest);
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Kundli generated successfully", kundli);
@@ -45,5 +45,15 @@ public class KundliController {
                                               @RequestParam(value = "lan", required = false, defaultValue = "en") String language) {
         String svgXml = kundliService.getChart(req, chartType, chartStyle, language);
         return ResponseEntity.ok(svgXml);
+    }
+
+    @PostMapping("/vimshottari-dasha")
+    public ResponseEntity<Object> getVimshottariDashaDetails(
+            @RequestBody @Valid KundliRequest request,
+            @RequestParam(required = false, defaultValue = "maha-dasha") String dashaType,
+            @RequestParam(value = "lan", required = false, defaultValue = "en") String language) {
+        Object dasha = kundliService.getVimshottariDasha(request, dashaType, language);
+        if(dasha == null) return ResponseHandler.responseBuilder(HttpStatus.BAD_REQUEST, false, "Vimshottari Dasha generation failed");
+        return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Vimshottari Dasha generated successfully", "dasha", dasha);
     }
 }

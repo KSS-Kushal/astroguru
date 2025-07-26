@@ -268,7 +268,10 @@ public class ChatSessionService {
     public long removeAllUserFromQueue(UUID astrologerId) {
         long length = queueService.getQueueLength(astrologerId);
         for (long i = 0; i < length; i++) {
-            queueService.dequeue(astrologerId);
+            String nextUser = queueService.dequeue(astrologerId);
+            ChatQueueEntry entry = queueService.parseEntry(nextUser);
+            QueueNotificationDto queueNotificationDto = new QueueNotificationDto(entry.getUserId(),entry.getSessionType(), "Sorry, Astrologer is not available");
+            messagingTemplate.convertAndSend("/topic/queue/" + entry.getUserId(), queueNotificationDto);
         }
         return length;
     }

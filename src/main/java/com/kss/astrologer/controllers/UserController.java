@@ -5,15 +5,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.kss.astrologer.dto.AstrologerDto;
 import com.kss.astrologer.dto.UserDto;
@@ -30,6 +25,7 @@ import com.kss.astrologer.services.WalletService;
 import com.kss.astrologer.types.Role;
 
 import jakarta.validation.Valid;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -100,4 +96,12 @@ public class UserController {
                 walletDto, transactions.getNumber() + 1, transactions.getTotalPages(), transactions.getTotalElements(),
                 transactions.isLast());
     }
+
+    @PostMapping(value = "/upload/profile-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Object> uploadProfileImage(@AuthenticationPrincipal CustomUserDetails userDetails,
+                                                     @RequestPart("image") MultipartFile imgFile){
+        UserDto userDto = userService.uploadProfileImage(userDetails.getUserId(), imgFile);
+        return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Uploaded Successfully", "user", userDto);
+    }
+
 }

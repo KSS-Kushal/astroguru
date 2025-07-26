@@ -1,5 +1,6 @@
 package com.kss.astrologer.repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -16,4 +17,6 @@ public interface ChatSessionRepository extends JpaRepository<ChatSession, UUID> 
     Optional<ChatSession> findByAstrologerIdAndStatus(UUID astrologerId, ChatStatus status);
 
     Page<ChatSession> findByUserIdOrAstrologerId(UUID userId, UUID astrologerId, Pageable pageable);
+
+    List<ChatSession> findByStatus(ChatStatus chatStatus);
 }

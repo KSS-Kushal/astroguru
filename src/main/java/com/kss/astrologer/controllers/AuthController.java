@@ -1,13 +1,12 @@
 package com.kss.astrologer.controllers;
 
+import com.kss.astrologer.exceptions.CustomException;
+import com.kss.astrologer.types.Role;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.kss.astrologer.dto.UserDto;
 import com.kss.astrologer.handler.ResponseHandler;
@@ -35,7 +34,13 @@ public class AuthController {
     private UserService userService;
     
     @PostMapping("/login")
-    public ResponseEntity<Object> login(@RequestBody @Valid AuthRequest authRequest) {
+    public ResponseEntity<Object> login(@RequestBody @Valid AuthRequest authRequest,
+                                        @RequestParam(required = false, defaultValue = "USER") Role role) {
+        if(role == Role.ADMIN) {
+            User user = userService.getUserByMobile(authRequest.getMobile());
+            if(user==null) throw new CustomException(HttpStatus.NOT_FOUND, "Admin not found");
+            if(user.getRole()!=Role.ADMIN) throw new CustomException(HttpStatus.FORBIDDEN, "You have not Admin access");
+        }
         String otp = otpService.sendOtp(authRequest.getMobile());
         return ResponseHandler.responseBuilder(HttpStatus.OK, true,  "OTP sent successfully", "otp", otp);
     }

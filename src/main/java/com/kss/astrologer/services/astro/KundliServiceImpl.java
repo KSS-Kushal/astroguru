@@ -28,7 +28,7 @@ import com.kss.astrologer.request.KundliRequest;
 import io.github.cdimascio.dotenv.Dotenv;
 
 @Service
-public class KundliServiceImpl implements KundliService {
+public class KundliServiceImpl {
 
     private final Dotenv dotenv = Dotenv.configure()
             .ignoreIfMalformed()
@@ -46,7 +46,6 @@ public class KundliServiceImpl implements KundliService {
     private final String kundliUrl = "https://api.prokerala.com/v2/astrology/kundli";
     private final String chartUrl = "https://api.prokerala.com/v2/astrology/chart";
 
-    @Override
     public String getAccessToken() {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
@@ -73,8 +72,7 @@ public class KundliServiceImpl implements KundliService {
         }
     }
 
-    @Cacheable(value = "kundli", key = "#kundliRequest.latitude + '-' + #kundliRequest.longitude + '-' + #kundliRequest.birthDate + '-' + #kundliRequest.birthTime")
-    @Override
+//    @Cacheable(value = "kundli", key = "#kundliRequest.latitude + '-' + #kundliRequest.longitude + '-' + #kundliRequest.birthDate + '-' + #kundliRequest.birthTime")
     public Object getKundli(KundliRequest kundliRequest) {
         String accessToken = getAccessToken();
 
@@ -107,8 +105,7 @@ public class KundliServiceImpl implements KundliService {
 
     }
 
-    @Cacheable(value = "chart", key = "#kundliRequest.latitude + '-' + #kundliRequest.longitude + '-' + #kundliRequest.birthDate + '-' + #kundliRequest.birthTime + '-' + #chartType + '-' + #chartStyle")
-    @Override
+//    @Cacheable(value = "chart", key = "#kundliRequest.latitude + '-' + #kundliRequest.longitude + '-' + #kundliRequest.birthDate + '-' + #kundliRequest.birthTime + '-' + #chartType + '-' + #chartStyle")
     public String getChart(KundliRequest kundliRequest, String chartType, String chartStyle) {
         String accessToken = getAccessToken();
 

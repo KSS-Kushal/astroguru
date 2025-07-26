@@ -1,10 +1,13 @@
 package com.kss.astrologer.services;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -126,13 +129,30 @@ public class AstrologerService {
         return new AstrologerDto(astrologerDetails);
     }
 
-    public Page<AstrologerDto> getAllAstrologers(Integer page, Integer size) {
+    public Page<AstrologerDto> getAllAstrologers(Integer page, Integer size, String search, String sortByExpertise) {
         Pageable pageable = PageRequest.of(page - 1, size);
-        Page<AstrologerDetails> astrologerDetailsPage = astrologerRepository.findAll(pageable);
-        return astrologerDetailsPage.map(astrologer -> {
-            boolean isOnline = onlineUserService.isOnline(astrologer.getUser().getId());
-            return new AstrologerDto(astrologer, isOnline);
-        });
+        Page<AstrologerDetails> astrologerDetailsPage;
+        if (search != null && !search.trim().isEmpty()) {
+            astrologerDetailsPage = astrologerRepository.searchAstrologers(search.trim(), pageable);
+        } else {
+            astrologerDetailsPage = astrologerRepository.findAll(pageable);
+        }
+
+        List<AstrologerDto> dtos = astrologerDetailsPage
+                .stream()
+                .map(astrologer -> new AstrologerDto(astrologer, onlineUserService.isOnline(astrologer.getUser().getId())))
+                .collect(Collectors.toList());
+
+        if (sortByExpertise != null && !sortByExpertise.trim().isEmpty()) {
+            String keyword = sortByExpertise.trim().toLowerCase();
+            dtos.sort((a, b) -> {
+                boolean aMatches = a.getExpertise() != null && a.getExpertise().toLowerCase().contains(keyword);
+                boolean bMatches = b.getExpertise() != null && b.getExpertise().toLowerCase().contains(keyword);
+                return Boolean.compare(bMatches, aMatches); // true comes before false
+            });
+        }
+
+        return new PageImpl<>(dtos, pageable, astrologerDetailsPage.getTotalElements());
     }
 
     public AstrologerDto getAstrologerByUserId(UUID id) {

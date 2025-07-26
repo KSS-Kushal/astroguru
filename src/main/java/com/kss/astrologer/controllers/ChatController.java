@@ -63,6 +63,14 @@ public class ChatController {
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, msg);
     }
 
+    @GetMapping("/skip/{userId}")
+    public ResponseEntity<?> skipChat(@PathVariable UUID userId,
+                                        @AuthenticationPrincipal CustomUserDetails userDetails) {
+        UUID astrologerId = userDetails.getUserId();
+        String msg = chatSessionService.skipChat(userId, astrologerId);
+        return ResponseHandler.responseBuilder(HttpStatus.OK, true, msg);
+    }
+
     @GetMapping("/queue")
     public ResponseEntity<Object> getRequestList(@AuthenticationPrincipal CustomUserDetails userDetails) {
         UUID astrologerId = userDetails.getUserId();

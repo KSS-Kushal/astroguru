@@ -1,7 +1,11 @@
 package com.kss.astrologer.controllers;
 
+import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
+import com.kss.astrologer.dto.MonthlyProfitBarDto;
+import com.kss.astrologer.dto.StatsResponseDto;
 import com.kss.astrologer.models.Bannar;
 import com.kss.astrologer.services.*;
 import org.slf4j.Logger;
@@ -112,7 +116,7 @@ public class AdminController {
                 transactions.isLast());
     }
 
-    @PostMapping(value = "upload-bannar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/upload-bannar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Object> uploadBannar(@RequestPart("image") MultipartFile imageFile) {
         Bannar bannar = bannarService.uploadBannar(imageFile);
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Bannar Uploaded Successfully", "bannar", bannar);
@@ -122,5 +126,20 @@ public class AdminController {
     public ResponseEntity<Object> deleteBannar(@PathVariable UUID id) {
         Bannar bannar = bannarService.deleteBannar(id);
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Bannar Deleted Successfully", "bannar", bannar);
+    }
+
+
+//    Dashboard Apis
+    @GetMapping("/stats")
+    public ResponseEntity<Object> getStats() {
+        StatsResponseDto statsResponse = adminService.getStats();
+        return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Fetched Stats Successfully", "stats", statsResponse);
+    }
+
+    @GetMapping("/monthly-profit-bar")
+    public ResponseEntity<Object> getMonthlyProfit(@RequestParam(required = false) Integer year) {
+        if(year == null) year = LocalDate.now().getYear();
+        List<MonthlyProfitBarDto> monthlyProfits = adminService.getAdminMonthlyProfitBarData(year);
+        return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Fetched Monthly Profit Successfully", "monthlyProfits", monthlyProfits);
     }
 }

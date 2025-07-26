@@ -9,6 +9,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 
+import com.kss.astrologer.dto.QueueNotificationDto;
 import com.kss.astrologer.types.SessionType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -94,7 +95,8 @@ public class ChatSessionService {
         }
         queueService.enqueue(astrologerId, userId, requestedMinutes, SessionType.CHAT);
         long pos = queueService.getPosition(astrologerId, userId);
-        messagingTemplate.convertAndSend("/topic/queue/" + astrologerId, "New chat request received");
+        QueueNotificationDto queueNotificationDto = new QueueNotificationDto(userId, SessionType.CHAT, "New chat request received");
+        messagingTemplate.convertAndSend("/topic/queue/" + astrologerId, queueNotificationDto);
         return pos + 1;
     }
 
@@ -111,6 +113,17 @@ public class ChatSessionService {
         return "Chat accepted and started.";
     }
 
+    public String skipChat(UUID userId, UUID astrologerId) {
+        if (!queueService.isNextInQueue(astrologerId, userId)) {
+            return "User is not first in the queue.";
+        }
+        String entry = queueService.dequeue(astrologerId);
+        SessionType sessionType = queueService.parseSessionType(entry);
+        QueueNotificationDto queueNotificationDto = new QueueNotificationDto(astrologerId, sessionType, "Sorry, Astrologer is not available");
+        messagingTemplate.convertAndSend("/topic/queue/" + userId, queueNotificationDto);
+        return "Request skipped successfully";
+    }
+
     @Transactional
     public void startChat(UUID userId, UUID astrologerId, int requestedMinutes) {
         if (requestedMinutes < 5 && requestedMinutes != 2) {
@@ -120,6 +133,11 @@ public class ChatSessionService {
         Optional<ChatSession> existing = sessionRepo.findByAstrologerIdAndStatus(astrologerId, ChatStatus.ACTIVE);
         if (existing.isPresent()) {
             logger.warn("Chat already active for astrologer: {}", astrologerId);
+            ChatSessionDto existingSessionDto = new ChatSessionDto(existing.get());
+            if(existingSessionDto.getUser().getId() == userId && existingSessionDto.getAstrologer().getId() == astrologerId) {
+                messagingTemplate.convertAndSend("/topic/chat/" + userId + "/chatId", existingSessionDto);
+                messagingTemplate.convertAndSend("/topic/chat/" + astrologerId + "/chatId", existingSessionDto);
+            }
             return; // Prevent duplicate start
         }
 
@@ -223,8 +241,9 @@ public class ChatSessionService {
         UUID astrologerId = session.getAstrologer().getId();
         String nextUser = queueService.peek(astrologerId);
         if (nextUser != null) {
-            messagingTemplate.convertAndSend("/topic/queue/" + astrologerId, "Chat ended, next user can be served");
-            // UUID userId = queueService.parseUserId(nextUser);
+             UUID userId = queueService.parseUserId(nextUser);
+            QueueNotificationDto queueNotificationDto = new QueueNotificationDto(userId,SessionType.CHAT, "Chat ended, next user can be served");
+            messagingTemplate.convertAndSend("/topic/queue/" + astrologerId, queueNotificationDto);
             // int requestedMinutes = queueService.parseRequestedMinutes(nextUser);
             // startChat(userId, astrologerId, requestedMinutes);
         }
@@ -249,7 +268,10 @@ public class ChatSessionService {
     public long removeAllUserFromQueue(UUID astrologerId) {
         long length = queueService.getQueueLength(astrologerId);
         for (long i = 0; i < length; i++) {
-            queueService.dequeue(astrologerId);
+            String nextUser = queueService.dequeue(astrologerId);
+            ChatQueueEntry entry = queueService.parseEntry(nextUser);
+            QueueNotificationDto queueNotificationDto = new QueueNotificationDto(entry.getUserId(),entry.getSessionType(), "Sorry, Astrologer is not available");
+            messagingTemplate.convertAndSend("/topic/queue/" + entry.getUserId(), queueNotificationDto);
         }
         return length;
     }

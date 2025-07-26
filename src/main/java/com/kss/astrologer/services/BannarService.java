@@ -21,13 +21,13 @@ public class BannarService {
     private S3Service s3Service;
 
     public Bannar uploadBannar(MultipartFile file) {
-        List<Bannar> bannars = bannarRepository.findAll();
-        if(!bannars.isEmpty()) {
-            bannars.forEach(b -> {
-                s3Service.deleteFileByUrl(b.getImgUrl());
-                deleteBannar(b.getId());
-            });
-        }
+//        List<Bannar> bannars = bannarRepository.findAll();
+//        if(!bannars.isEmpty()) {
+//            bannars.forEach(b -> {
+//                s3Service.deleteFileByUrl(b.getImgUrl());
+//                deleteBannar(b.getId());
+//            });
+//        }
         String imgUrl = s3Service.uploadFile(file, "bannar");
         Bannar bannar = new Bannar();
         bannar.setImgUrl(imgUrl);

@@ -17,10 +17,12 @@ public class S3Config {
             .ignoreIfMissing()
             .load();
 
+    private final String region = dotenv.get("AWS_REGION");
+
     @Bean
     public S3Client s3Client() {
         return S3Client.builder()
-                .region(Region.of(dotenv.get("AWS_REGION")))
+                .region(Region.of(region==null?"ap-south-1":region))
                 .credentialsProvider(StaticCredentialsProvider.create(
                     AwsBasicCredentials.create(
                         dotenv.get("AWS_ACCESS_KEY_ID"), 

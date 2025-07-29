@@ -60,9 +60,6 @@ public class CallSessionService {
     private SimpMessagingTemplate messagingTemplate;
 
     @Autowired
-    private AgoraService agoraService;
-
-    @Autowired
     private ObjectMapper objectMapper;
 
     @Autowired
@@ -104,7 +101,7 @@ public class CallSessionService {
         }
 
         startCall(userId, astrologerId, queueEntry.getRequestedMinutes(), queueEntry.getSessionType());
-        return "Chat accepted and started.";
+        return "Call accepted and started.";
     }
 
     @Transactional
@@ -214,6 +211,11 @@ public class CallSessionService {
         return sessionDtos;
     }
 
+    public CallSessionDto getActiveSession(UUID astrologerId) {
+        Optional<CallSession> session = callSessionRepo.findByAstrologerIdAndStatus(astrologerId, ChatStatus.ACTIVE);
+        return session.map(CallSessionDto::new).orElse(null);
+    }
+
     private void startTimer(UUID sessionId, int duration) {
         final long[] remainingSeconds = {duration * 60L};
 
@@ -240,6 +242,13 @@ public class CallSessionService {
 
         // Store the scheduled task so we can cancel it later
         timerTasks.put(sessionId, future);
+    }
+
+    public void endCallByUser(UUID sessionId) {
+        CallSession session = callSessionRepo.findById(sessionId).orElse(null);
+        if(session == null) return;
+        endCall(sessionId);
+        cancelTimer(sessionId); // Cancel timer
     }
 
     private void cancelTimer(UUID sessionId) {

@@ -24,23 +24,28 @@ public class WebSocketEventListener {
     public void handleWebSocketConnectListener(SessionConnectEvent event) {
         StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
         String userIdHeader = headerAccessor.getFirstNativeHeader("user-id");
-        logger.info("connected" +userIdHeader);
         if (userIdHeader != null) {
             UUID userId = UUID.fromString(userIdHeader);
             onlineUserService.addUser(userId);
-            logger.info("User connected: " + userId);
+            onlineUserService.sendNotification(userId);
+            logger.info("User connected: {}", userId);
+
+            headerAccessor.getSessionAttributes().put("user-id", userId);
         }
     }
 
     @EventListener
     public void handleWebSocketDisconnectListener(SessionDisconnectEvent event) {
         StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
-        String userIdHeader = headerAccessor.getFirstNativeHeader("user-id");
-
-        if (userIdHeader != null) {
-            UUID userId = UUID.fromString(userIdHeader);
+//        String userIdHeader = headerAccessor.getFirstNativeHeader("user-id");
+        Object userIdObj = headerAccessor.getSessionAttributes().get("user-id");
+        if (userIdObj instanceof UUID userId) {
+//            UUID userId = UUID.fromString(userIdHeader);
             onlineUserService.removeUser(userId);
-            logger.info("User disconnected: " + userId);
+            onlineUserService.sendNotification(userId);
+            logger.info("User disconnected: {}", userId);
+        } else {
+            logger.warn("No user-id found in session during disconnect");
         }
     }
 }

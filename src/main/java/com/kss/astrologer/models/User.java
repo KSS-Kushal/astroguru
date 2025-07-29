@@ -56,6 +56,7 @@ public class User {
     private Role role; // USER, ASTROLOGER, ADMIN
 
     private boolean isFreeChatUsed; // Only for USER
+    private Boolean isFirstTopUpDone;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private Wallet wallet;

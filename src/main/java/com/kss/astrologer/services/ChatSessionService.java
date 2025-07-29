@@ -9,7 +9,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 
-import com.kss.astrologer.dto.QueueNotificationDto;
+import com.kss.astrologer.dto.*;
 import com.kss.astrologer.types.SessionType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,9 +24,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kss.astrologer.dto.ChatQueueEntry;
-import com.kss.astrologer.dto.ChatSessionDto;
-import com.kss.astrologer.dto.UserDto;
 import com.kss.astrologer.exceptions.CustomException;
 import com.kss.astrologer.models.AstrologerDetails;
 import com.kss.astrologer.models.ChatSession;
@@ -171,37 +168,10 @@ public class ChatSessionService {
         }
 
         // Deduct wallet amount from user
-        // WalletTransaction transaction = new WalletTransaction();
-        // transaction.setAmount(totalCharge);
-        // transaction.setType(TransactionType.DEBIT);
-        // transaction.setWallet(wallet);
-        // transaction.setDescription("Chat session with astrologer " + astrologer.getUser().getName() + " for "
-        //         + requestedMinutes + " minutes.");
-
-        // transaction = walletTransactionRepository.save(transaction);
-
-        // wallet.setBalance(wallet.getBalance() - totalCharge);
-        // List<WalletTransaction> transactions = wallet.getTransactions();
-        // transactions.add(transaction);
-        // wallet.setTransactions(transactions);
-        // walletRepository.save(wallet);
         walletService.debitBalance(userId, totalCharge, "Chat session with astrologer " + astrologer.getUser().getName() + " for "
                 + requestedMinutes + " minutes.");
 
         // Credit amount to astrologer's wallet
-        // WalletTransaction astrologerTransaction = new WalletTransaction();
-        // astrologerTransaction.setAmount(totalCharge);
-        // astrologerTransaction.setType(TransactionType.CREDIT);
-        // astrologerTransaction.setWallet(astrologerWallet);
-        // astrologerTransaction
-        //         .setDescription("Chat session with user " + user.getName() + " for " + requestedMinutes + " minutes.");
-        // astrologerTransaction = walletTransactionRepository.save(astrologerTransaction);
-
-        // astrologerWallet.setBalance(astrologerWallet.getBalance() + totalCharge);
-        // List<WalletTransaction> astrologerTransactions = astrologerWallet.getTransactions();
-        // astrologerTransactions.add(astrologerTransaction);
-        // astrologerWallet.setTransactions(astrologerTransactions);
-        // walletRepository.save(astrologerWallet);
         walletService.creditBalance(astrologerId, totalCharge, "Chat session with user " + user.getName() + " for " + requestedMinutes + " minutes.");
 
         ChatSession session = ChatSession.builder()
@@ -254,13 +224,18 @@ public class ChatSessionService {
                 .orElseThrow(() -> new CustomException("Chat session not found"));
     }
 
-    public List<UserDto> getRequestList(UUID astrologerId) {
+    public ChatSessionDto getActiveSession(UUID astrologerId) {
+        Optional<ChatSession> session = sessionRepo.findByAstrologerIdAndStatus(astrologerId, ChatStatus.ACTIVE);
+        return session.map(ChatSessionDto::new).orElse(null);
+    }
+
+    public List<QueueEntryDto> getRequestList(UUID astrologerId) {
         List<ChatQueueEntry> queue = queueService.getQueue(astrologerId);
         return queue.stream()
                 .map(entry -> {
                     User user = userRepository.findById(entry.getUserId())
                             .orElseThrow(() -> new CustomException("User not found"));
-                    return new UserDto(user);
+                    return new QueueEntryDto(entry, user);
                 })
                 .toList();
     }

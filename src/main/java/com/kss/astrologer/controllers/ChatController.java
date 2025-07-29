@@ -3,12 +3,15 @@ package com.kss.astrologer.controllers;
 import java.util.List;
 import java.util.UUID;
 
+import com.kss.astrologer.dto.*;
+import com.kss.astrologer.services.CallSessionService;
 import com.kss.astrologer.services.aws.S3Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,9 +23,6 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.kss.astrologer.dto.ChatMessageDto;
-import com.kss.astrologer.dto.ChatSessionDto;
-import com.kss.astrologer.dto.UserDto;
 import com.kss.astrologer.handler.ResponseHandler;
 import com.kss.astrologer.request.ChatRequest;
 import com.kss.astrologer.security.CustomUserDetails;
@@ -37,6 +37,9 @@ public class ChatController {
 
     @Autowired
     private ChatSessionService chatSessionService;
+
+    @Autowired
+    private CallSessionService callSessionService;
 
     @Autowired
     private ChatMessageService chatMessageService;
@@ -74,7 +77,7 @@ public class ChatController {
     @GetMapping("/queue")
     public ResponseEntity<Object> getRequestList(@AuthenticationPrincipal CustomUserDetails userDetails) {
         UUID astrologerId = userDetails.getUserId();
-        List<UserDto> users = chatSessionService.getRequestList(astrologerId);
+        List<QueueEntryDto> users = chatSessionService.getRequestList(astrologerId);
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Request list fetched successfully", "users",
                 users);
     }
@@ -110,5 +113,17 @@ public class ChatController {
     public ResponseEntity<Object> uploadImageInChat(@RequestPart("image") MultipartFile imageFile) {
         String imgUrl = s3Service.uploadFile(imageFile, "chat");
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Image Uploaded Successfully", "imgUrl", imgUrl);
+    }
+
+    @GetMapping("/session/{astrologerId}")
+    public ResponseEntity<Object> getActiveSession(@PathVariable UUID astrologerId) {
+        ChatSessionDto chatSession = chatSessionService.getActiveSession(astrologerId);
+        if (chatSession != null)
+            return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Session fetched successfully", "session",
+                    chatSession);
+        CallSessionDto callSession = callSessionService.getActiveSession(astrologerId);
+
+        return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Session fetched successfully", "session",
+                    callSession);
     }
 }

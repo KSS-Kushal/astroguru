@@ -4,6 +4,9 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.Random;
 
+import com.kss.astrologer.services.sms.SmsService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -14,9 +17,13 @@ import com.kss.astrologer.repository.OtpVerificationRepository;
 
 @Service
 public class OtpService {
+    private static final Logger logger = LoggerFactory.getLogger(OtpService.class);
 
     @Autowired
     private OtpVerificationRepository otpRepository;
+
+    @Autowired
+    private SmsService smsService;
 
     public String sendOtp(String mobile) {
         String otp = String.valueOf(new Random().nextInt(9000) + 1000);
@@ -27,8 +34,10 @@ public class OtpService {
                 .expiresAt(LocalDateTime.now().plusMinutes(5))
                 .build());
 
-        // TODO: Integrate with SMS API
-        System.out.println("OTP for " + mobile + ": " + otp);
+        // TODO: Integrate with SMS API - Done
+        logger.info("OTP for {}: {}", mobile, otp);
+        String sms = smsService.sendSms(mobile, otp);
+        logger.info(sms);
         return otp;
     }
 

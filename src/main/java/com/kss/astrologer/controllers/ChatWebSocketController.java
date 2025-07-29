@@ -1,23 +1,21 @@
 package com.kss.astrologer.controllers;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
+import com.kss.astrologer.dto.*;
+import com.kss.astrologer.request.CallEnd;
 import com.kss.astrologer.request.ChatLeave;
-import com.kss.astrologer.services.ChatQueueService;
+import com.kss.astrologer.services.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
-import com.kss.astrologer.dto.ChatMessageDto;
-import com.kss.astrologer.dto.TypingIndicator;
 import com.kss.astrologer.models.ChatMessage;
 import com.kss.astrologer.models.ChatSession;
 import com.kss.astrologer.models.User;
-import com.kss.astrologer.services.ChatMessageService;
-import com.kss.astrologer.services.ChatSessionService;
-import com.kss.astrologer.services.UserService;
 
 @Controller
 public class ChatWebSocketController {
@@ -27,6 +25,9 @@ public class ChatWebSocketController {
 
     @Autowired
     private ChatSessionService chatSessionService;
+
+    @Autowired
+    private CallSessionService callSessionService;
 
     @Autowired
     private ChatQueueService chatQueueService;
@@ -69,8 +70,26 @@ public class ChatWebSocketController {
     @MessageMapping("/chat.leave")
     public void userLeave(@Payload ChatLeave chatLeave) {
         chatQueueService.removeUser(chatLeave.getAstrologerId(), chatLeave.getUserId());
-        messagingTemplate.convertAndSend("/topic/queue/" + chatLeave.getUserId(), "Exited from waiting list");
-        messagingTemplate.convertAndSend("/topic/queue/" + chatLeave.getAstrologerId(), "One user exited from waiting list");
+        System.out.println(chatLeave);
+        QueueNotificationDto notificationDtoForUser = new QueueNotificationDto(chatLeave.getUserId(), chatLeave.getSessionType(), "Exited from waiting list");
+        QueueNotificationDto notificationDtoForAstrologer = new QueueNotificationDto(chatLeave.getUserId(), chatLeave.getSessionType(), "One user exited from waiting list");
+        messagingTemplate.convertAndSend("/topic/queue/" + chatLeave.getUserId(), notificationDtoForUser);
+        messagingTemplate.convertAndSend("/topic/queue/" + chatLeave.getAstrologerId(), notificationDtoForAstrologer);
+    }
+
+    @MessageMapping("/call.end")
+    public void endCallByUser(@Payload CallEnd callEnd) {
+        callSessionService.endCallByUser(callEnd.getSessionId());
+    }
+
+    @MessageMapping("/session.active")
+    public void getActiveSession(@Payload UUID astrologerId) {
+        ChatSessionDto chatSession = chatSessionService.getActiveSession(astrologerId);
+        if (chatSession != null)
+            messagingTemplate.convertAndSend("/topic/session/" + astrologerId, chatSession);
+        CallSessionDto callSession = callSessionService.getActiveSession(astrologerId);
+        if (callSession != null)
+            messagingTemplate.convertAndSend("/topic/session/" + astrologerId, callSession);
     }
 
 }

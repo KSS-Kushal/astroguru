@@ -3,6 +3,8 @@ package com.kss.astrologer.services;
 import java.util.List;
 import java.util.UUID;
 
+import com.kss.astrologer.models.User;
+import com.kss.astrologer.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -21,9 +23,12 @@ import com.kss.astrologer.types.TransactionType;
 
 @Service
 public class WalletService {
-    
+
     @Autowired
     private WalletRepository walletRepository;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @Autowired
     private WalletTransactionRepository walletTransactionRepository;
@@ -52,7 +57,7 @@ public class WalletService {
         System.out.println("transactions : " + walletTransactions.size());
         wallet.setTransactions(walletTransactions);
         wallet = walletRepository.save(wallet);
-        
+
         return new WalletDto(wallet);
     }
 
@@ -75,12 +80,53 @@ public class WalletService {
         walletTransactions.add(transaction);
         wallet.setTransactions(walletTransactions);
         wallet = walletRepository.save(wallet);
-        
+
         return new WalletDto(wallet);
     }
 
     public Page<WalletTransaction> getTransaction(UUID walletId, Integer page, Integer size) {
         Pageable pageable = PageRequest.of(page - 1, size, Direction.DESC, "timestamp");
         return walletTransactionRepository.findByWalletId(walletId, pageable);
+    }
+
+    public WalletTransaction topup(UUID userId, double amount) {
+        Wallet wallet = walletRepository.findByUserId(userId).orElse(null);
+        if (wallet == null) {
+            throw new CustomException("Wallet not found for user ID: " + userId);
+        }
+        WalletTransaction transaction = new WalletTransaction();
+        transaction.setWallet(wallet);
+        transaction.setAmount(amount);
+        transaction.setDescription("Wallet TopUp");
+        transaction.setType(TransactionType.PENDING);
+
+        transaction = walletTransactionRepository.save(transaction);
+
+        return transaction;
+    }
+
+    @Transactional
+    public WalletTransaction topup(WalletTransaction transaction, double amount, TransactionType type, boolean isFirstTopUp) {
+        transaction.setType(type);
+        transaction.setAmount(amount);
+        transaction = walletTransactionRepository.save(transaction);
+
+        Wallet wallet = transaction.getWallet();
+        WalletDto walletDto = new WalletDto(wallet);
+
+        if (type == TransactionType.CREDIT) {
+            if(isFirstTopUp) {
+                walletDto = creditBalance(wallet.getUser().getId(), transaction.getAmount() * 0.5, "TopUp Cashback");
+                User user = wallet.getUser();
+                user.setIsFirstTopUpDone(true);
+                userRepository.save(user);
+            }
+            wallet.setBalance(walletDto.getBalance() + transaction.getAmount());
+            List<WalletTransaction> walletTransactions = walletDto.getTransactions();
+            walletTransactions.add(transaction);
+            wallet.setTransactions(walletTransactions);
+            walletRepository.save(wallet);
+        }
+        return transaction;
     }
 }

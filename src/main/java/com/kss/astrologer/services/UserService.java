@@ -46,6 +46,7 @@ public class UserService {
                     .mobile(mobile)
                     .role(Role.USER)
                     .isFreeChatUsed(false)
+                    .isFirstTopUpDone(false)
                     .wallet(wallet)
 //                    .imgUri("https://img.freepik.com/free-vector/young-man-orange-hoodie_1308-175788.jpg?ga=GA1.1.1570607994.1749976697&semt=ais_hybrid&w=740")
                     .createdAt(LocalDateTime.now())
@@ -67,6 +68,8 @@ public class UserService {
             User user = userRepository.save(User.builder()
                     .mobile(mobile)
                     .role(Role.ADMIN)
+                    .isFreeChatUsed(false)
+                    .isFirstTopUpDone(false)
                     .createdAt(LocalDateTime.now())
                     .updatedAt(LocalDateTime.now())
                     .build());

@@ -1,8 +1,8 @@
 package com.kss.astrologer.types;
 
-public enum TransactionType {
-    CREDIT,
-    DEBIT,
+public enum PaymentStatus {
+    CREATED,
     PENDING,
+    SUCCESS,
     FAILED
 }

@@ -44,8 +44,8 @@ public class OnlineUserService {
     }
 
     public void sendNotification(UUID userId) {
-        User user = userService.getById(userId);
-        if(user.getRole() != Role.ASTROLOGER) return;
+//        User user = userService.getById(userId);
+//        if(user.getRole() != Role.ASTROLOGER) return;
         Set<String> getAllOnlineAstrologers = getAllOnlineUsers();
         messagingTemplate.convertAndSend("/topic/online/astrologer", getAllOnlineAstrologers);
     }

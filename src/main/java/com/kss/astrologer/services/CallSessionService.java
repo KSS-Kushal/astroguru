@@ -65,6 +65,9 @@ public class CallSessionService {
     @Autowired
     private TaskScheduler taskScheduler;
 
+    @Autowired
+    private AdminService adminService;
+
     private final Map<UUID, ScheduledFuture<?>> timerTasks = new ConcurrentHashMap<>();
 
     public long requestCall(UUID userId, UUID astrologerId, int requestedMinutes, SessionType type) {
@@ -150,8 +153,14 @@ public class CallSessionService {
         walletService.debitBalance(userId, totalCharge, type.name() + " Call session with astrologer " + astrologer.getUser().getName() + " for "
                 + requestedMinutes + " minutes.");
 
+        double adminProfit = totalCharge * 0.33;
+        double astrologerProfit = totalCharge - adminProfit;
+
         // Credit amount to astrologer's wallet
-        walletService.creditBalance(astrologerId, totalCharge, type.name() + " Call session with user " + user.getName() + " for " + requestedMinutes + " minutes.");
+        walletService.creditBalance(astrologerId, astrologerProfit, type.name() + " Call session with user " + user.getName() + " for " + requestedMinutes + " minutes.");
+
+        // Credit amount to Admin wallet
+        walletService.creditBalance(adminService.getAdminId(), adminProfit, type.name() + " Call session with astrologer " + astrologer.getUser().getName() + " for " + requestedMinutes + " minutes.");
 
         String channelName = UUID.randomUUID().toString();
 //        String token = agoraService.generateToken(channelName, userId.toString(), requestedMinutes);

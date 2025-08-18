@@ -3,9 +3,13 @@ package com.kss.astrologer.services;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import com.kss.astrologer.request.ChangePasswordRequest;
+import com.kss.astrologer.request.RegisterAuthRequest;
 import com.kss.astrologer.services.aws.S3Service;
+import com.kss.astrologer.types.Gender;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +34,9 @@ public class UserService {
 
     @Autowired
     private S3Service s3Service;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     public User getUserByMobile(String mobile) {
         return userRepository.findByMobile(mobile).orElse(null);
@@ -67,7 +74,10 @@ public class UserService {
             wallet = walletRepository.save(wallet);
             User user = userRepository.save(User.builder()
                     .mobile(mobile)
+                    .name("Astrosevaa")
+                    .gender(Gender.MALE)
                     .role(Role.ADMIN)
+                    .imgUri("https://s3.ap-south-1.amazonaws.com/bucket.astrosevaa.com/logo.png")
                     .isFreeChatUsed(false)
                     .isFirstTopUpDone(false)
                     .createdAt(LocalDateTime.now())
@@ -114,6 +124,46 @@ public class UserService {
             s3Service.deleteFileByUrl(user.getImgUri());
         }
         user.setImgUri(imgUrl);
+        user = userRepository.save(user);
+        return new UserDto(user);
+    }
+
+    @Transactional
+    public UserDto registerUser(RegisterAuthRequest authRequest) {
+        User existingUser = userRepository.findByMobile(authRequest.getMobile()).orElse(null);
+        if(existingUser != null) throw new CustomException("User already exists with this mobile number");
+        Wallet wallet = new Wallet();
+        wallet.setBalance(0.0);
+        wallet = walletRepository.save(wallet);
+        User user = userRepository.save(User.builder()
+                .name(authRequest.getName())
+                .mobile(authRequest.getMobile())
+                .password(passwordEncoder.encode(authRequest.getPassword()))
+                .role(Role.USER)
+                .isFreeChatUsed(false)
+                .isFirstTopUpDone(false)
+                .wallet(wallet)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build());
+        wallet.setUser(user);
+        walletRepository.save(wallet);
+        return new UserDto(user);
+    }
+
+    public UserDto resetPassword(UUID userId) {
+        User user = getById(userId);
+        user.setPassword(passwordEncoder.encode("12345678"));
+        user = userRepository.save(user);
+        return new UserDto(user);
+    }
+
+    public UserDto changePassword(UUID userId, ChangePasswordRequest request) {
+        System.out.println(request);
+        User user = getById(userId);
+        if(!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) throw new CustomException("Current Password not match");
+        if(!request.getNewPassword().equals(request.getConfirmPassword())) throw new CustomException("New password and confirm password must be same");
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         user = userRepository.save(user);
         return new UserDto(user);
     }

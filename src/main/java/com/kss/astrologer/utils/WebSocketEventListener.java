@@ -2,6 +2,7 @@ package com.kss.astrologer.utils;
 
 import java.util.UUID;
 
+import com.kss.astrologer.services.AstrologerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +19,9 @@ public class WebSocketEventListener {
     @Autowired
     private OnlineUserService onlineUserService;
 
+    @Autowired
+    private AstrologerService astrologerService;
+
     private static final Logger logger = LoggerFactory.getLogger(WebSocketEventListener.class);
 
     @EventListener
@@ -27,7 +31,8 @@ public class WebSocketEventListener {
         if (userIdHeader != null) {
             UUID userId = UUID.fromString(userIdHeader);
             onlineUserService.addUser(userId);
-            onlineUserService.sendNotification(userId);
+            onlineUserService.sendNotification();
+            astrologerService.sendOnlineAstrologer();
             logger.info("User connected: {}", userId);
 
             headerAccessor.getSessionAttributes().put("user-id", userId);
@@ -42,7 +47,8 @@ public class WebSocketEventListener {
         if (userIdObj instanceof UUID userId) {
 //            UUID userId = UUID.fromString(userIdHeader);
             onlineUserService.removeUser(userId);
-            onlineUserService.sendNotification(userId);
+            onlineUserService.sendNotification();
+            astrologerService.sendOnlineAstrologer();
             logger.info("User disconnected: {}", userId);
         } else {
             logger.warn("No user-id found in session during disconnect");

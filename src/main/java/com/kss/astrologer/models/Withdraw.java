@@ -21,7 +21,7 @@ public class Withdraw {
     @ManyToOne
     private User user;
 
-    @OneToOne
+    @OneToOne(cascade = CascadeType.ALL)
     private WalletTransaction walletTransaction;
 
     private Double amount;

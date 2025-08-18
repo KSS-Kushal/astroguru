@@ -2,6 +2,8 @@ package com.kss.astrologer.services;
 
 import com.kss.astrologer.dto.MonthlyProfitBarDto;
 import com.kss.astrologer.dto.StatsResponseDto;
+import com.kss.astrologer.exceptions.CustomException;
+import com.kss.astrologer.models.Wallet;
 import com.kss.astrologer.models.WalletTransaction;
 import com.kss.astrologer.repository.UserRepository;
 import com.kss.astrologer.repository.WalletTransactionRepository;
@@ -14,10 +16,7 @@ import org.springframework.stereotype.Service;
 import com.kss.astrologer.dto.WalletDto;
 import com.kss.astrologer.models.User;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class AdminService {
@@ -43,18 +42,26 @@ public class AdminService {
         return wallet;
     }
 
+    public UUID getAdminId() {
+        List<User> users = userRepository.findByRole(Role.ADMIN);
+        if (users.isEmpty()) throw new CustomException("Admin not found");
+        User admin = users.get(0);
+        return admin.getId();
+    }
     public StatsResponseDto getStats() {
         Long totalUsers = userRepository.countByRole(Role.USER);
         Long totalAstrologers = userRepository.countByRole(Role.ASTROLOGER);
 
         Double userBalance = userRepository.getTotalWalletBalanceByRole(Role.USER);
         Double astrologerBalance = userRepository.getTotalWalletBalanceByRole(Role.ASTROLOGER);
+        Double adminBalance = userRepository.getTotalWalletBalanceByRole(Role.ADMIN);
 
         return StatsResponseDto.builder()
                 .totalUsers(totalUsers)
                 .totalAstrologers(totalAstrologers)
                 .totalUserWalletBalance(userBalance != null ? userBalance : 0.0)
                 .totalAstrologerWalletBalance(astrologerBalance != null ? astrologerBalance : 0.0)
+                .totalAdminWalletBalance(adminBalance != null ? adminBalance : 0.0)
                 .build();
     }
 

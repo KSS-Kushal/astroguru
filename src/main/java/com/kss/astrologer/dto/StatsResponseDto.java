@@ -14,4 +14,5 @@ public class StatsResponseDto {
     private Long totalAstrologers;
     private Double totalUserWalletBalance;
     private Double totalAstrologerWalletBalance;
+    private Double totalAdminWalletBalance;
 }

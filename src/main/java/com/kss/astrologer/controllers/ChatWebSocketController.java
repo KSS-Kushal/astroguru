@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 import com.kss.astrologer.dto.*;
+import com.kss.astrologer.request.ActiveSessionRequest;
 import com.kss.astrologer.request.CallEnd;
 import com.kss.astrologer.request.ChatLeave;
 import com.kss.astrologer.services.*;
@@ -37,6 +38,9 @@ public class ChatWebSocketController {
 
     @Autowired
     private ChatMessageService chatMessageService;
+
+    @Autowired
+    private OnlineUserService onlineUserService;
 
     @MessageMapping("/chat.send")
     public void sendMessage(@Payload ChatMessageDto dto) {
@@ -83,13 +87,19 @@ public class ChatWebSocketController {
     }
 
     @MessageMapping("/session.active")
-    public void getActiveSession(@Payload UUID astrologerId) {
+    public void getActiveSession(@Payload ActiveSessionRequest activeSessionRequest) {
+        UUID astrologerId = activeSessionRequest.getAstrologerId();
         ChatSessionDto chatSession = chatSessionService.getActiveSession(astrologerId);
         if (chatSession != null)
             messagingTemplate.convertAndSend("/topic/session/" + astrologerId, chatSession);
         CallSessionDto callSession = callSessionService.getActiveSession(astrologerId);
         if (callSession != null)
             messagingTemplate.convertAndSend("/topic/session/" + astrologerId, callSession);
+    }
+
+    @MessageMapping("/online.user")
+    public void getOnlineAstrologers() {
+        onlineUserService.sendNotification();
     }
 
 }

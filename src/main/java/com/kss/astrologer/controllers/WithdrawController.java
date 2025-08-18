@@ -1,6 +1,7 @@
 package com.kss.astrologer.controllers;
 
 import com.kss.astrologer.dto.WithdrawDto;
+import com.kss.astrologer.exceptions.CustomException;
 import com.kss.astrologer.handler.ResponseHandler;
 import com.kss.astrologer.security.CustomUserDetails;
 import com.kss.astrologer.services.WithdrawService;
@@ -24,6 +25,7 @@ public class WithdrawController {
     @GetMapping("/request")
     public ResponseEntity<Object> withdrawRequest(@AuthenticationPrincipal CustomUserDetails userDetails,
                                                   @RequestParam(required = false, defaultValue = "1.0") Double amount) {
+        if(amount.isNaN()) throw new CustomException("Invalid amount");
         WithdrawDto withdraw = withdrawService.createWithdrawRequest(amount, userDetails.getUserId());
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Withdraw requested successfully", "withdraw", withdraw);
     }

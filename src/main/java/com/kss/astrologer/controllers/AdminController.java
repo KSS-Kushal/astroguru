@@ -4,8 +4,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
-import com.kss.astrologer.dto.MonthlyProfitBarDto;
-import com.kss.astrologer.dto.StatsResponseDto;
+import com.kss.astrologer.dto.*;
 import com.kss.astrologer.models.Bannar;
 import com.kss.astrologer.services.*;
 import org.slf4j.Logger;
@@ -27,8 +26,6 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.kss.astrologer.dto.AstrologerDto;
-import com.kss.astrologer.dto.WalletDto;
 import com.kss.astrologer.handler.ResponseHandler;
 import com.kss.astrologer.models.Wallet;
 import com.kss.astrologer.models.WalletTransaction;
@@ -65,7 +62,7 @@ public class AdminController {
 
     @GetMapping("/create-admin")
     public ResponseEntity<Object> createAdmin() {
-        final String mobile = "9749610532";
+        final String mobile = "9239295959";
 
         userService.getOrCreateAdmin(mobile);
         logger.info("Admin created Successfully!");
@@ -128,6 +125,11 @@ public class AdminController {
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Bannar Deleted Successfully", "bannar", bannar);
     }
 
+    @GetMapping("/reset-password/{id}")
+    public ResponseEntity<Object> resetPassword(@PathVariable UUID id) {
+        UserDto user = userService.resetPassword(id);
+        return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Password Reset Successfully", "user", user);
+    }
 
 //    Dashboard Apis
     @GetMapping("/stats")

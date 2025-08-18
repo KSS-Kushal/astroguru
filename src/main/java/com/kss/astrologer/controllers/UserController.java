@@ -1,5 +1,6 @@
 package com.kss.astrologer.controllers;
 
+import com.kss.astrologer.request.ChangePasswordRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -102,6 +103,13 @@ public class UserController {
                                                      @RequestPart("image") MultipartFile imgFile){
         UserDto userDto = userService.uploadProfileImage(userDetails.getUserId(), imgFile);
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Uploaded Successfully", "user", userDto);
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<Object> changePassword(@AuthenticationPrincipal CustomUserDetails userDetails,
+                                                 @RequestBody ChangePasswordRequest request) {
+        UserDto user = userService.changePassword(userDetails.getUserId(), request);
+        return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Password changed successfully", "user", user);
     }
 
 }

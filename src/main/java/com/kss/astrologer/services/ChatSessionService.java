@@ -67,6 +67,9 @@ public class ChatSessionService {
     @Autowired
     private TaskScheduler taskScheduler;
 
+    @Autowired
+    private AdminService adminService;
+
     private final Map<UUID, ScheduledFuture<?>> timerTasks = new ConcurrentHashMap<>();
 
 
@@ -171,8 +174,14 @@ public class ChatSessionService {
         walletService.debitBalance(userId, totalCharge, "Chat session with astrologer " + astrologer.getUser().getName() + " for "
                 + requestedMinutes + " minutes.");
 
+        double adminProfit = totalCharge * 0.33;
+        double astrologerProfit = totalCharge - adminProfit;
+
         // Credit amount to astrologer's wallet
-        walletService.creditBalance(astrologerId, totalCharge, "Chat session with user " + user.getName() + " for " + requestedMinutes + " minutes.");
+        walletService.creditBalance(astrologerId, astrologerProfit, "Chat session with user " + user.getName() + " for " + requestedMinutes + " minutes.");
+
+        // Credit amount to Admin wallet
+        walletService.creditBalance(adminService.getAdminId(), adminProfit, "Chat session with astrologer " + astrologer.getUser().getName() + " for " + requestedMinutes + " minutes.");
 
         ChatSession session = ChatSession.builder()
                 .user(user)

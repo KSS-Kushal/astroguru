@@ -52,6 +52,8 @@ public class User {
     @Column(unique = true, nullable = false)
     private String mobile;
 
+    private String password;
+
     @Enumerated(EnumType.STRING)
     private Role role; // USER, ASTROLOGER, ADMIN
 

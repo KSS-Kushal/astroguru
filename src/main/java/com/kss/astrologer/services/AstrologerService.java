@@ -2,15 +2,19 @@ package com.kss.astrologer.services;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import com.kss.astrologer.request.UpdateAstrologerRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,6 +48,12 @@ public class AstrologerService {
     @Autowired
     private S3Service s3Service;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
+
     @Transactional
     public AstrologerDto createAstrologer(AstrologerRequest astrologerRequest, String imgUrl) {
         User existingUser = userRepository.findByMobile(astrologerRequest.getMobile()).orElse(null);
@@ -52,6 +62,7 @@ public class AstrologerService {
         User user = User.builder()
                 .name(astrologerRequest.getName())
                 .mobile(astrologerRequest.getMobile())
+                .password(passwordEncoder.encode(astrologerRequest.getPassword()))
                 .role(Role.ASTROLOGER)
                 .isFreeChatUsed(false)
                 .isFirstTopUpDone(false)
@@ -85,7 +96,7 @@ public class AstrologerService {
     }
 
     @Transactional
-    public AstrologerDto updateAstrologer(AstrologerRequest astrologerRequest, UUID astrologerId, String imgUrl) {
+    public AstrologerDto updateAstrologer(UpdateAstrologerRequest astrologerRequest, UUID astrologerId, String imgUrl) {
         AstrologerDetails astrologerDetails = astrologerRepository.findById(astrologerId)
                 .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Astrologer not found"));
 
@@ -93,10 +104,10 @@ public class AstrologerService {
 
         if (astrologerRequest.getName() != null)
             user.setName(astrologerRequest.getName());
-        if (imgUrl != null)
-            if(user.getImgUri() != null) s3Service.deleteFileByUrl(user.getImgUri());
+        if (imgUrl != null) {
+            if (user.getImgUri() != null) s3Service.deleteFileByUrl(user.getImgUri());
             user.setImgUri(imgUrl);
-
+        }
         if (astrologerRequest.getExpertise() != null)
             astrologerDetails.setExpertise(astrologerRequest.getExpertise());
         if (astrologerRequest.getAbout() != null)
@@ -162,5 +173,19 @@ public class AstrologerService {
                 .orElseThrow(
                         () -> new CustomException(HttpStatus.NOT_FOUND, "Astrologer not found for user ID: " + id));
         return new AstrologerDto(astrologerDetails);
+    }
+
+    public List<AstrologerDto> getOnlineAstrologer() {
+        Set<String> onlineUsers = onlineUserService.getAllOnlineUsers();
+        return onlineUsers.stream().map(userId -> {
+            AstrologerDto astrologer = getAstrologerByUserId(UUID.fromString(userId));
+            astrologer.setOnline(true);
+            return astrologer;
+        }).toList();
+    }
+
+    public void sendOnlineAstrologer() {
+        List<AstrologerDto> astrologers = getOnlineAstrologer();
+        messagingTemplate.convertAndSend("/topic/online/astrologer/list", astrologers);
     }
 }

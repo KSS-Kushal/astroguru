@@ -40,6 +40,7 @@ public class WithdrawService {
 
     @Transactional
     public WithdrawDto createWithdrawRequest(Double amount, UUID userId) {
+        if(amount == null || amount<=0) throw new CustomException("Amount must be greater than 0.0");
         User user = userService.getById(userId);
         Wallet wallet = user.getWallet();
         if(wallet.getBalance()<amount) throw new CustomException("Insufficient balance");

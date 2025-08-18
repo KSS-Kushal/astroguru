@@ -43,7 +43,7 @@ public class OnlineUserService {
         return redisTemplate.opsForSet().members(ONLINE_USERS_KEY);
     }
 
-    public void sendNotification(UUID userId) {
+    public void sendNotification() {
 //        User user = userService.getById(userId);
 //        if(user.getRole() != Role.ASTROLOGER) return;
         Set<String> getAllOnlineAstrologers = getAllOnlineUsers();

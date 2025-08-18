@@ -1,7 +1,9 @@
 package com.kss.astrologer.controllers;
 
+import java.util.List;
 import java.util.UUID;
 
+import com.kss.astrologer.request.UpdateAstrologerRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,7 +61,7 @@ public class AstrologerController {
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Object> updateAstrologerById(
             @PathVariable UUID id,
-            @RequestPart("data") @Valid AstrologerRequest astrologerRequest,
+            @RequestPart("data") @Valid UpdateAstrologerRequest astrologerRequest,
             @RequestPart(value = "image", required = false) MultipartFile imageFile) {
         String imgUrl = null;
         if (imageFile != null && !imageFile.isEmpty()) {
@@ -69,5 +71,11 @@ public class AstrologerController {
         logger.info("Updated Astrologer details for ID: {}", id);
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Astrologer details updated successfully",
                 "astrologer", updatedAstrologer);
+    }
+
+    @GetMapping("/online/list")
+    public ResponseEntity<Object> getOnlineAstrologers() {
+        List<AstrologerDto> astrologers = astrologerService.getOnlineAstrologer();
+        return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Online Astrologer fetched successfully", "astrologers", astrologers);
     }
 }

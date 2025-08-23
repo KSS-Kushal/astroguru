@@ -26,6 +26,10 @@ public class AstrologerDto {
     private boolean isBlocked;
     private boolean isOnline = false;
 
+    private Boolean isChatOnline = false;
+    private Boolean isAudioOnline = false;
+    private Boolean isVideoOnline = false;
+
     public AstrologerDto(AstrologerDetails astrologerDetails) {
         this.id = astrologerDetails.getId();
         this.user = new UserDto(astrologerDetails.getUser());
@@ -37,6 +41,9 @@ public class AstrologerDto {
         this.pricePerMinuteVoice = astrologerDetails.getPricePerMinuteVoice();
         this.pricePerMinuteVideo = astrologerDetails.getPricePerMinuteVideo();
         this.isBlocked = astrologerDetails.isBlocked();
+        if(astrologerDetails.getIsChatOnline() != null) this.isChatOnline = astrologerDetails.getIsChatOnline();
+        if(astrologerDetails.getIsAudioOnline() != null) this.isAudioOnline = astrologerDetails.getIsAudioOnline();
+        if(astrologerDetails.getIsVideoOnline() != null) this.isVideoOnline = astrologerDetails.getIsVideoOnline();
     }
 
     public AstrologerDto(AstrologerDetails astrologerDetails, boolean isOnline) {

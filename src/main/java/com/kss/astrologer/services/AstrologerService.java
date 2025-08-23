@@ -6,7 +6,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import com.kss.astrologer.request.OnlineStatusRequest;
 import com.kss.astrologer.request.UpdateAstrologerRequest;
+import com.kss.astrologer.types.OnlineType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -187,5 +189,22 @@ public class AstrologerService {
     public void sendOnlineAstrologer() {
         List<AstrologerDto> astrologers = getOnlineAstrologer();
         messagingTemplate.convertAndSend("/topic/online/astrologer/list", astrologers);
+    }
+
+    public AstrologerDto changeAstrologerOnlineStatus(UUID astrologerId, OnlineStatusRequest onlineStatus) {
+        AstrologerDetails astrologerDetails = astrologerRepository.findByUserId(astrologerId)
+                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Astrologer not found"));
+        if(onlineStatus.getOnlineType() == OnlineType.CHATONLINE) astrologerDetails.setIsChatOnline(onlineStatus.getStatus());
+        if(onlineStatus.getOnlineType() == OnlineType.AUDIOONLINE) astrologerDetails.setIsAudioOnline(onlineStatus.getStatus());
+        if(onlineStatus.getOnlineType() == OnlineType.VIDEOONLINE) astrologerDetails.setIsVideoOnline(onlineStatus.getStatus());
+
+        if(astrologerDetails.getIsChatOnline() || astrologerDetails.getIsAudioOnline() || astrologerDetails.getIsVideoOnline()) {
+            onlineUserService.addUser(astrologerId);
+        } else {
+            onlineUserService.removeUser(astrologerId);
+        }
+        sendOnlineAstrologer();
+        onlineUserService.sendNotification();
+        return new AstrologerDto(astrologerRepository.save(astrologerDetails));
     }
 }

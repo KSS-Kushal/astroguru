@@ -40,6 +40,10 @@ public class AstrologerDetails {
     private Double pricePerMinuteVoice;
     private Double pricePerMinuteVideo;
 
+    private Boolean isChatOnline = false;
+    private Boolean isAudioOnline = false;
+    private Boolean isVideoOnline = false;
+
     private boolean isBlocked;
 }
 

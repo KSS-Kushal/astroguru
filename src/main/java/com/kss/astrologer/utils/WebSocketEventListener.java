@@ -16,11 +16,11 @@ import com.kss.astrologer.services.OnlineUserService;
 
 @Component
 public class WebSocketEventListener {
-    @Autowired
-    private OnlineUserService onlineUserService;
-
-    @Autowired
-    private AstrologerService astrologerService;
+//    @Autowired
+//    private OnlineUserService onlineUserService;
+//
+//    @Autowired
+//    private AstrologerService astrologerService;
 
     private static final Logger logger = LoggerFactory.getLogger(WebSocketEventListener.class);
 
@@ -30,9 +30,9 @@ public class WebSocketEventListener {
         String userIdHeader = headerAccessor.getFirstNativeHeader("user-id");
         if (userIdHeader != null) {
             UUID userId = UUID.fromString(userIdHeader);
-            onlineUserService.addUser(userId);
-            onlineUserService.sendNotification();
-            astrologerService.sendOnlineAstrologer();
+//            onlineUserService.addUser(userId);
+//            onlineUserService.sendNotification();
+//            astrologerService.sendOnlineAstrologer();
             logger.info("User connected: {}", userId);
 
             headerAccessor.getSessionAttributes().put("user-id", userId);
@@ -46,9 +46,9 @@ public class WebSocketEventListener {
         Object userIdObj = headerAccessor.getSessionAttributes().get("user-id");
         if (userIdObj instanceof UUID userId) {
 //            UUID userId = UUID.fromString(userIdHeader);
-            onlineUserService.removeUser(userId);
-            onlineUserService.sendNotification();
-            astrologerService.sendOnlineAstrologer();
+//            onlineUserService.removeUser(userId);
+//            onlineUserService.sendNotification();
+//            astrologerService.sendOnlineAstrologer();
             logger.info("User disconnected: {}", userId);
         } else {
             logger.warn("No user-id found in session during disconnect");

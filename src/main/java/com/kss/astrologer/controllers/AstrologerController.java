@@ -3,7 +3,9 @@ package com.kss.astrologer.controllers;
 import java.util.List;
 import java.util.UUID;
 
+import com.kss.astrologer.request.OnlineStatusRequest;
 import com.kss.astrologer.request.UpdateAstrologerRequest;
+import com.kss.astrologer.security.CustomUserDetails;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,13 +13,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.kss.astrologer.dto.AstrologerDto;
@@ -77,5 +74,14 @@ public class AstrologerController {
     public ResponseEntity<Object> getOnlineAstrologers() {
         List<AstrologerDto> astrologers = astrologerService.getOnlineAstrologer();
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Online Astrologer fetched successfully", "astrologers", astrologers);
+    }
+
+    @PostMapping("/change-online")
+    public ResponseEntity<Object> changeOnlineStatus(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody OnlineStatusRequest request
+            ) {
+        AstrologerDto astrologer = astrologerService.changeAstrologerOnlineStatus(userDetails.getUserId(), request);
+        return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Online status changed successfully", "astrologer", astrologer);
     }
 }

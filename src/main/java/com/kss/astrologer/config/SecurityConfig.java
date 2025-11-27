@@ -30,6 +30,10 @@ import com.kss.astrologer.security.JwtAuthenticationEntryPoint;
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    public static final String[] PUBLIC_URLS = {"/api/v1/auth/**", "/actuator/health", "/api/v1/admin/create-admin",
+            "/ws-chat/**", "/api/v1/payment/webhook"};
+    public static final String[] HOME_PUBLIC_URLS = {"/api/v1/bannar", "/api/v1/astrologers", "/api/v1/astrologers/online/list"};
+
     @Autowired
     private JwtAuthFilter jwtAuthFilter;
 
@@ -56,9 +60,8 @@ public class SecurityConfig {
                 }))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/api/v1/auth/**", "/actuator/health", "/api/v1/admin/create-admin",
-                                "/ws-chat/**", "/api/v1/payment/webhook")
-                        .permitAll()
+                        .requestMatchers(PUBLIC_URLS).permitAll()
+                        .requestMatchers(HttpMethod.GET, HOME_PUBLIC_URLS).permitAll()
                         .requestMatchers("/api/v1/admin/**").hasAuthority("ADMIN")
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex

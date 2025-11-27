@@ -39,3 +39,5 @@ docker-compose.yml
 logs/
 
 .env
+
+src/main/resources/firebase-services.json

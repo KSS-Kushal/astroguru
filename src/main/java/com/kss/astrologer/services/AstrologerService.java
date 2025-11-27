@@ -198,11 +198,28 @@ public class AstrologerService {
         if(onlineStatus.getOnlineType() == OnlineType.AUDIOONLINE) astrologerDetails.setIsAudioOnline(onlineStatus.getStatus());
         if(onlineStatus.getOnlineType() == OnlineType.VIDEOONLINE) astrologerDetails.setIsVideoOnline(onlineStatus.getStatus());
 
+        // Removable
+        if(astrologerDetails.getIsChatOnline() == null) astrologerDetails.setIsChatOnline(false);
+        if(astrologerDetails.getIsAudioOnline() == null) astrologerDetails.setIsAudioOnline(false);
+        if(astrologerDetails.getIsVideoOnline() == null) astrologerDetails.setIsVideoOnline(false);
+
         if(astrologerDetails.getIsChatOnline() || astrologerDetails.getIsAudioOnline() || astrologerDetails.getIsVideoOnline()) {
             onlineUserService.addUser(astrologerId);
-        } else {
+        } else if(onlineUserService.isOnline(astrologerId)) {
             onlineUserService.removeUser(astrologerId);
         }
+        sendOnlineAstrologer();
+        onlineUserService.sendNotification();
+        return new AstrologerDto(astrologerRepository.save(astrologerDetails));
+    }
+
+    public AstrologerDto logoutAstrologer(UUID astrologerId) {
+        AstrologerDetails astrologerDetails = astrologerRepository.findByUserId(astrologerId)
+                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Astrologer not found"));
+        astrologerDetails.setIsChatOnline(false);
+        astrologerDetails.setIsAudioOnline(false);
+        astrologerDetails.setIsVideoOnline(false);
+        if(onlineUserService.isOnline(astrologerId)) onlineUserService.removeUser(astrologerId);
         sendOnlineAstrologer();
         onlineUserService.sendNotification();
         return new AstrologerDto(astrologerRepository.save(astrologerDetails));

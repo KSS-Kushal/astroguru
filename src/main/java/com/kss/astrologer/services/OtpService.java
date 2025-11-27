@@ -25,8 +25,12 @@ public class OtpService {
     @Autowired
     private SmsService smsService;
 
+    public int generateOtp() {
+        return new Random().nextInt(9000) + 1000;
+    }
+
     public String sendOtp(String mobile) {
-        String otp = String.valueOf(new Random().nextInt(9000) + 1000);
+        String otp = String.valueOf(generateOtp());
         otpRepository.save(OtpVerification.builder()
                 .mobile(mobile)
                 .otp(otp)

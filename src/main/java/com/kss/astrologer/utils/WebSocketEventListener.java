@@ -19,8 +19,8 @@ public class WebSocketEventListener {
 //    @Autowired
 //    private OnlineUserService onlineUserService;
 //
-//    @Autowired
-//    private AstrologerService astrologerService;
+    @Autowired
+    private AstrologerService astrologerService;
 
     private static final Logger logger = LoggerFactory.getLogger(WebSocketEventListener.class);
 
@@ -32,7 +32,7 @@ public class WebSocketEventListener {
             UUID userId = UUID.fromString(userIdHeader);
 //            onlineUserService.addUser(userId);
 //            onlineUserService.sendNotification();
-//            astrologerService.sendOnlineAstrologer();
+            astrologerService.sendOnlineAstrologer();
             logger.info("User connected: {}", userId);
 
             headerAccessor.getSessionAttributes().put("user-id", userId);

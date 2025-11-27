@@ -58,5 +58,8 @@ public class AstrologerDto {
         this.pricePerMinuteVideo = astrologerDetails.getPricePerMinuteVideo();
         this.isBlocked = astrologerDetails.isBlocked();
         this.isOnline = isOnline;
+        if(astrologerDetails.getIsChatOnline() != null) this.isChatOnline = astrologerDetails.getIsChatOnline();
+        if(astrologerDetails.getIsAudioOnline() != null) this.isAudioOnline = astrologerDetails.getIsAudioOnline();
+        if(astrologerDetails.getIsVideoOnline() != null) this.isVideoOnline = astrologerDetails.getIsVideoOnline();
     }
 }

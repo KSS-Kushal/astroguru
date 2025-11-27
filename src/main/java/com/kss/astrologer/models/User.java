@@ -57,8 +57,8 @@ public class User {
     @Enumerated(EnumType.STRING)
     private Role role; // USER, ASTROLOGER, ADMIN
 
-    private boolean isFreeChatUsed; // Only for USER
-    private Boolean isFirstTopUpDone;
+    private boolean isFreeChatUsed = false; // Only for USER
+    private Boolean isFirstTopUpDone = false;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private Wallet wallet;

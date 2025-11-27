@@ -1,8 +1,11 @@
 package com.kss.astrologer.controllers;
 
+import com.kss.astrologer.dto.AstrologerDto;
 import com.kss.astrologer.exceptions.CustomException;
 import com.kss.astrologer.request.AuthWithPasswordRequest;
 import com.kss.astrologer.request.RegisterAuthRequest;
+import com.kss.astrologer.security.CustomUserDetails;
+import com.kss.astrologer.services.AstrologerService;
 import com.kss.astrologer.types.Role;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -11,6 +14,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -38,6 +42,9 @@ public class AuthController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private AstrologerService astrologerService;
 
     @Autowired
     private AuthenticationManager authenticationManager;
@@ -90,5 +97,14 @@ public class AuthController {
         } catch (BadCredentialsException e) {
             return ResponseHandler.responseBuilder(HttpStatus.UNAUTHORIZED, false, "Invalid credentials");
         }
+    }
+
+    @GetMapping("/logout")
+    public ResponseEntity<Object> logout(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        if(userDetails.getRole() == Role.ASTROLOGER) {
+            AstrologerDto astrologer = astrologerService.logoutAstrologer(userDetails.getUserId());
+            return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Successfully Logged Out!", "astrologer", astrologer);
+        }
+        return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Successfully Logged Out!");
     }
 }

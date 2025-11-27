@@ -3,6 +3,7 @@ package com.kss.astrologer.services;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kss.astrologer.dto.CallSessionDto;
 import com.kss.astrologer.dto.ChatQueueEntry;
+import com.kss.astrologer.dto.QueueEntryDto;
 import com.kss.astrologer.dto.QueueNotificationDto;
 import com.kss.astrologer.exceptions.CustomException;
 import com.kss.astrologer.models.*;
@@ -10,6 +11,7 @@ import com.kss.astrologer.repository.AstrologerRepository;
 import com.kss.astrologer.repository.CallSessionRepository;
 import com.kss.astrologer.repository.UserRepository;
 import com.kss.astrologer.repository.WalletRepository;
+import com.kss.astrologer.services.notification.NotificationService;
 import com.kss.astrologer.types.ChatStatus;
 import com.kss.astrologer.types.SessionType;
 import org.slf4j.Logger;
@@ -27,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -68,10 +71,13 @@ public class CallSessionService {
     @Autowired
     private AdminService adminService;
 
+    @Autowired
+    private NotificationService notificationService;
+
     private final Map<UUID, ScheduledFuture<?>> timerTasks = new ConcurrentHashMap<>();
 
     public long requestCall(UUID userId, UUID astrologerId, int requestedMinutes, SessionType type) {
-        logger.info("Duration: " + requestedMinutes);
+        logger.info("Duration: {}", requestedMinutes);
         AstrologerDetails astrologer = astrologerRepository.findByUserId(astrologerId)
                 .orElseThrow(() -> new CustomException("Astrologer not found"));
 
@@ -87,8 +93,15 @@ public class CallSessionService {
         }
         queueService.enqueue(astrologerId, userId, requestedMinutes, type);
         long pos = queueService.getPosition(astrologerId, userId);
+
+        //Notification
         QueueNotificationDto queueNotificationDto = new QueueNotificationDto(userId, type, "New " + type.name() + " call request received");
         messagingTemplate.convertAndSend("/topic/queue/" + astrologerId, queueNotificationDto);
+        notificationService.sendNotification(astrologerId, "New Call Request", "You have received a new call request. Please respond as soon as possible");
+
+        List<QueueEntryDto> requests = getRequestList(astrologerId);
+        messagingTemplate.convertAndSend("/topic/requests/" + astrologerId, requests);
+
         return pos + 1;
     }
 
@@ -102,6 +115,11 @@ public class CallSessionService {
         if (queueEntry.getSessionType() != SessionType.AUDIO && queueEntry.getSessionType() != SessionType.VIDEO) {
             throw new CustomException("Not a call session.");
         }
+
+        //Notification
+        notificationService.sendNotification(userId, "Call Request Accepted", "Astrologer has accepted your call request. Please join as soon as possible");
+        List<QueueEntryDto> requests = getRequestList(astrologerId);
+        messagingTemplate.convertAndSend("/topic/requests/" + astrologerId, requests);
 
         startCall(userId, astrologerId, queueEntry.getRequestedMinutes(), queueEntry.getSessionType());
         return "Call accepted and started.";
@@ -223,6 +241,17 @@ public class CallSessionService {
     public CallSessionDto getActiveSession(UUID astrologerId) {
         Optional<CallSession> session = callSessionRepo.findByAstrologerIdAndStatus(astrologerId, ChatStatus.ACTIVE);
         return session.map(CallSessionDto::new).orElse(null);
+    }
+
+    public List<QueueEntryDto> getRequestList(UUID astrologerId) {
+        List<ChatQueueEntry> queue = queueService.getQueue(astrologerId);
+        return queue.stream()
+                .map(entry -> {
+                    User user = userRepository.findById(entry.getUserId())
+                            .orElseThrow(() -> new CustomException("User not found"));
+                    return new QueueEntryDto(entry, user);
+                })
+                .toList();
     }
 
     private void startTimer(UUID sessionId, int duration) {

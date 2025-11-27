@@ -10,6 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 
 import com.kss.astrologer.dto.*;
+import com.kss.astrologer.services.notification.NotificationService;
 import com.kss.astrologer.types.SessionType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,6 +71,9 @@ public class ChatSessionService {
     @Autowired
     private AdminService adminService;
 
+    @Autowired
+    private NotificationService notificationService;
+
     private final Map<UUID, ScheduledFuture<?>> timerTasks = new ConcurrentHashMap<>();
 
 
@@ -95,8 +99,15 @@ public class ChatSessionService {
         }
         queueService.enqueue(astrologerId, userId, requestedMinutes, SessionType.CHAT);
         long pos = queueService.getPosition(astrologerId, userId);
+
+        // Notification
         QueueNotificationDto queueNotificationDto = new QueueNotificationDto(userId, SessionType.CHAT, "New chat request received");
         messagingTemplate.convertAndSend("/topic/queue/" + astrologerId, queueNotificationDto);
+        notificationService.sendNotification(astrologerId, "New Chat Request", "Someone has requested a chat with you. Please respond as soon as possible");
+
+        List<QueueEntryDto> requests = getRequestList(astrologerId);
+        messagingTemplate.convertAndSend("/topic/requests/" + astrologerId, requests);
+
         return pos + 1;
     }
 
@@ -107,6 +118,11 @@ public class ChatSessionService {
 
         String entry = queueService.dequeue(astrologerId);
         int duration = queueService.parseRequestedMinutes(entry);
+
+        //Notification
+        notificationService.sendNotification(userId, "Chat Request Accepted", "Astrologer has accepted your chat request. Please join as soon as possible");
+        List<QueueEntryDto> requests = getRequestList(astrologerId);
+        messagingTemplate.convertAndSend("/topic/requests/" + astrologerId, requests);
 
         startChat(userId, astrologerId, duration);
 
@@ -119,8 +135,15 @@ public class ChatSessionService {
         }
         String entry = queueService.dequeue(astrologerId);
         SessionType sessionType = queueService.parseSessionType(entry);
-        QueueNotificationDto queueNotificationDto = new QueueNotificationDto(astrologerId, sessionType, "Sorry, Astrologer is not available");
+
+        //Notification
+        QueueNotificationDto queueNotificationDto = new QueueNotificationDto(astrologerId, sessionType, "Sorry, the astrologer is currently unavailable");
         messagingTemplate.convertAndSend("/topic/queue/" + userId, queueNotificationDto);
+        notificationService.sendNotification(userId, "Your Request is Canceled", "Sorry, the astrologer is currently unavailable.");
+
+        List<QueueEntryDto> requests = getRequestList(astrologerId);
+        messagingTemplate.convertAndSend("/topic/requests/" + astrologerId, requests);
+
         return "Request skipped successfully";
     }
 

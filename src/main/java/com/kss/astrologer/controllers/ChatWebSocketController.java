@@ -1,6 +1,7 @@
 package com.kss.astrologer.controllers;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import com.kss.astrologer.dto.*;
@@ -8,6 +9,7 @@ import com.kss.astrologer.request.ActiveSessionRequest;
 import com.kss.astrologer.request.CallEnd;
 import com.kss.astrologer.request.ChatLeave;
 import com.kss.astrologer.services.*;
+import com.kss.astrologer.services.notification.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -42,10 +44,12 @@ public class ChatWebSocketController {
     @Autowired
     private OnlineUserService onlineUserService;
 
+    @Autowired
+    private NotificationService notificationService;
+
     @MessageMapping("/chat.send")
     public void sendMessage(@Payload ChatMessageDto dto) {
         // Convert DTO to entity
-        System.out.println(dto);
         ChatSession session = chatSessionService.getSessionById(dto.getSessionId());
         User sender = userService.getById(dto.getSenderId());
         User receiver = userService.getById(dto.getReceiverId());
@@ -74,11 +78,15 @@ public class ChatWebSocketController {
     @MessageMapping("/chat.leave")
     public void userLeave(@Payload ChatLeave chatLeave) {
         chatQueueService.removeUser(chatLeave.getAstrologerId(), chatLeave.getUserId());
-        System.out.println(chatLeave);
         QueueNotificationDto notificationDtoForUser = new QueueNotificationDto(chatLeave.getUserId(), chatLeave.getSessionType(), "Exited from waiting list");
         QueueNotificationDto notificationDtoForAstrologer = new QueueNotificationDto(chatLeave.getUserId(), chatLeave.getSessionType(), "One user exited from waiting list");
         messagingTemplate.convertAndSend("/topic/queue/" + chatLeave.getUserId(), notificationDtoForUser);
         messagingTemplate.convertAndSend("/topic/queue/" + chatLeave.getAstrologerId(), notificationDtoForAstrologer);
+
+        List<QueueEntryDto> requests = chatSessionService.getRequestList(chatLeave.getAstrologerId());
+        messagingTemplate.convertAndSend("/topic/requests/" + chatLeave.getAstrologerId(), requests);
+        notificationService.sendNotification(chatLeave.getAstrologerId(), chatLeave.getSessionType() + " Request Canceled", "Someone has canceled a "+ chatLeave.getSessionType() +" request.");
+
     }
 
     @MessageMapping("/call.end")

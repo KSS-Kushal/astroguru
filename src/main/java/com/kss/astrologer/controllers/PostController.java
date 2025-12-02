@@ -57,8 +57,8 @@ public class PostController {
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Post image deleted successfully");
     }
 
-    @PutMapping(path = "/{id}")
-    public ResponseEntity<Object> addPostImage(@PathVariable UUID id,
+    @PutMapping(path = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Object> updatePost(@PathVariable UUID id,
                                                @AuthenticationPrincipal CustomUserDetails userDetails,
                                                @RequestPart("text") String text,
                                                @RequestPart(value = "images", required = false) List<MultipartFile> images) {

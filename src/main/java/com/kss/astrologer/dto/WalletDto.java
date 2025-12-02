@@ -16,12 +16,14 @@ public class WalletDto {
     private UUID id;
     private UserDto user;
     private Double balance = 0.0;
+    private Double lockedBalance = 0.0;
     private List<WalletTransaction> transactions = new ArrayList<>();
 
     public WalletDto(Wallet wallet) {
         this.id = wallet.getId();
         this.user = new UserDto(wallet.getUser());
         this.balance = wallet.getBalance();
+        this.lockedBalance = wallet.getLockedBalance();
         this.transactions = wallet.getTransactions();
     }
 }

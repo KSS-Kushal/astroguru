@@ -84,6 +84,21 @@ public class WalletService {
         return new WalletDto(wallet);
     }
 
+    public Wallet addLockedBalance(UUID walletId, Double amount) {
+        Wallet wallet = walletRepository.findById(walletId).orElseThrow(() -> new CustomException("Wallet not found"));
+        Double lockedBalance = wallet.getLockedBalance();
+        wallet.setLockedBalance(lockedBalance + Math.abs(amount));
+        return walletRepository.save(wallet);
+    }
+
+    public Wallet subtractLockedBalance(UUID walletId, Double amount) {
+        Wallet wallet = walletRepository.findById(walletId).orElseThrow(() -> new CustomException("Wallet not found"));
+        Double lockedBalance = wallet.getLockedBalance();
+        if(Math.abs(amount)>lockedBalance) throw new CustomException("Insufficient Balance");
+        wallet.setLockedBalance(lockedBalance - Math.abs(amount));
+        return walletRepository.save(wallet);
+    }
+
     public Page<WalletTransaction> getTransaction(UUID walletId, Integer page, Integer size) {
         Pageable pageable = PageRequest.of(page - 1, size, Direction.DESC, "timestamp");
         return walletTransactionRepository.findByWalletId(walletId, pageable);

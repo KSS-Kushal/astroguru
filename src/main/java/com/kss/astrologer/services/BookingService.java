@@ -1,5 +1,6 @@
 package com.kss.astrologer.services;
 
+import com.kss.astrologer.dto.BookingAppointmentDto;
 import com.kss.astrologer.exceptions.CustomException;
 import com.kss.astrologer.models.*;
 import com.kss.astrologer.repository.AstrologerRepository;
@@ -11,6 +12,10 @@ import com.kss.astrologer.types.SessionType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -147,5 +152,18 @@ public class BookingService {
                 return 0.0;
             }
         }
+    }
+
+    public Page<BookingAppointmentDto> getAllBookedAppointment(UUID userId, Integer page, Integer size) {
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.Direction.ASC, "createdAt");
+        Page<BookingAppointment> appointmentPage = bookingAppointmentRepository.findByAstrologer_IdOrUser_Id(userId,
+                userId, pageable);
+        return appointmentPage.map(BookingAppointmentDto::new);
+    }
+
+    public BookingAppointmentDto getAppointmentById(UUID id) {
+        BookingAppointment appointment = bookingAppointmentRepository.findById(id)
+                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Appointment not found"));
+        return new BookingAppointmentDto(appointment);
     }
 }

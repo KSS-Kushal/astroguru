@@ -1,5 +1,6 @@
 package com.kss.astrologer.controllers;
 
+import com.kss.astrologer.dto.BookingAppointmentDto;
 import com.kss.astrologer.handler.ResponseHandler;
 import com.kss.astrologer.models.BookingAppointment;
 import com.kss.astrologer.request.CreateBookingRequest;
@@ -8,13 +9,13 @@ import com.kss.astrologer.services.BookingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/appointment")
@@ -29,6 +30,23 @@ public class AppointmentController {
                                                   @RequestBody CreateBookingRequest request) {
         BookingAppointment appointment = bookingService.bookAppointment(request, userDetails.getUserId());
         return ResponseHandler.responseBuilder(HttpStatus.CREATED, true, "Appointment booked successfully",
+                "appointment", appointment);
+    }
+
+    @GetMapping
+    public ResponseEntity<Object> getAllBookedAppointment(@AuthenticationPrincipal CustomUserDetails userDetails,
+                                                          @RequestParam(defaultValue = "1", required = false) Integer page,
+                                                          @RequestParam(defaultValue = "10", required = false) Integer size) {
+        Page<BookingAppointmentDto> appointments = bookingService.getAllBookedAppointment(userDetails.getUserId(),
+                page, size);
+        return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Appointment fetched successfully",
+                "appointments", appointments);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Object> getAppointmentById(@PathVariable UUID id) {
+        BookingAppointmentDto appointment = bookingService.getAppointmentById(id);
+        return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Appointment fetched successfully",
                 "appointment", appointment);
     }
 }

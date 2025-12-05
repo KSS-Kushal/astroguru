@@ -7,6 +7,7 @@ import com.kss.astrologer.repository.AstrologerRepository;
 import com.kss.astrologer.repository.BookingAppointmentRepository;
 import com.kss.astrologer.repository.BookingConfigRepository;
 import com.kss.astrologer.request.CreateBookingRequest;
+import com.kss.astrologer.types.BookingStatus;
 import com.kss.astrologer.types.BookingType;
 import com.kss.astrologer.types.SessionType;
 import org.slf4j.Logger;
@@ -165,5 +166,16 @@ public class BookingService {
         BookingAppointment appointment = bookingAppointmentRepository.findById(id)
                 .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Appointment not found"));
         return new BookingAppointmentDto(appointment);
+    }
+
+    public BookingAppointmentDto updateStatus(UUID id, BookingStatus status, Integer otp) {
+        BookingAppointment appointment = bookingAppointmentRepository.findById(id)
+                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Appointment not found"));
+        if(status == BookingStatus.COMPLETED) {
+            if (otp== null || appointment.getOtp() != otp)
+                throw new CustomException("Invalid otp");
+        }
+        appointment.setStatus(status);
+        return new BookingAppointmentDto(bookingAppointmentRepository.save(appointment));
     }
 }

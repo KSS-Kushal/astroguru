@@ -1,6 +1,8 @@
 package com.kss.astrologer.models;
 
 import com.kss.astrologer.types.BookingStatus;
+import com.kss.astrologer.types.BookingType;
+import com.kss.astrologer.types.SessionType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -11,8 +13,10 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Builder;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -22,7 +26,9 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "booking_appointments")
-@Data
+@Getter
+@Setter
+@Builder
 @AllArgsConstructor
 @NoArgsConstructor
 public class BookingAppointment {
@@ -38,6 +44,7 @@ public class BookingAppointment {
     @JoinColumn(name = "astrologer_id")
     private User astrologer;
 
+    private String reason;
     private LocalDate appointmentDate;
     private int appointmentDuration;
     private Double totalCost;
@@ -45,7 +52,10 @@ public class BookingAppointment {
     private int otp;
 
     @Enumerated(EnumType.STRING)
-    private BookingStatus status;
+    private BookingStatus status = BookingStatus.PENDING;
+    private BookingType bookingType = BookingType.ONLINE;
+    @Enumerated(EnumType.STRING)
+    private SessionType sessionType;
 
     @CreationTimestamp
     private LocalDateTime createdAt;

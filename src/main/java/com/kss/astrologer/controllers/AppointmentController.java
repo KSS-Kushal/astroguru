@@ -4,6 +4,8 @@ import com.kss.astrologer.dto.BookingAppointmentDto;
 import com.kss.astrologer.handler.ResponseHandler;
 import com.kss.astrologer.models.BookingAppointment;
 import com.kss.astrologer.request.CreateBookingRequest;
+import com.kss.astrologer.request.CreateSessionRequest;
+import com.kss.astrologer.request.UpdateAppointmentStatusRequest;
 import com.kss.astrologer.security.CustomUserDetails;
 import com.kss.astrologer.services.BookingService;
 import org.slf4j.Logger;
@@ -47,6 +49,22 @@ public class AppointmentController {
     public ResponseEntity<Object> getAppointmentById(@PathVariable UUID id) {
         BookingAppointmentDto appointment = bookingService.getAppointmentById(id);
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Appointment fetched successfully",
+                "appointment", appointment);
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<Object> updateAppointmentStatus(@PathVariable UUID id,
+                                                          @RequestBody UpdateAppointmentStatusRequest body) {
+        BookingAppointmentDto appointment = bookingService.updateStatus(id, body.getStatus(), body.getOtp());
+        return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Appointment status updated successfully",
+                "appointment", appointment);
+    }
+
+    @PatchMapping("/{id}/session")
+    public ResponseEntity<Object> createSession(@PathVariable UUID id,
+                                                @RequestBody CreateSessionRequest body) {
+        BookingAppointmentDto appointment = bookingService.createChatSession(id, body.getType());
+        return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Appointment session created successfully",
                 "appointment", appointment);
     }
 }

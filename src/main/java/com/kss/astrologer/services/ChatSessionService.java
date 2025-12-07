@@ -10,6 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 
 import com.kss.astrologer.dto.*;
+import com.kss.astrologer.models.*;
 import com.kss.astrologer.services.notification.NotificationService;
 import com.kss.astrologer.types.SessionType;
 import org.slf4j.Logger;
@@ -26,10 +27,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kss.astrologer.exceptions.CustomException;
-import com.kss.astrologer.models.AstrologerDetails;
-import com.kss.astrologer.models.ChatSession;
-import com.kss.astrologer.models.User;
-import com.kss.astrologer.models.Wallet;
 import com.kss.astrologer.repository.AstrologerRepository;
 import com.kss.astrologer.repository.ChatSessionRepository;
 import com.kss.astrologer.repository.UserRepository;

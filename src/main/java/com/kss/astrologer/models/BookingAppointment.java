@@ -3,15 +3,7 @@ package com.kss.astrologer.models;
 import com.kss.astrologer.types.BookingStatus;
 import com.kss.astrologer.types.BookingType;
 import com.kss.astrologer.types.SessionType;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -53,9 +45,15 @@ public class BookingAppointment {
 
     @Enumerated(EnumType.STRING)
     private BookingStatus status = BookingStatus.PENDING;
+    @Enumerated(EnumType.STRING)
     private BookingType bookingType = BookingType.ONLINE;
     @Enumerated(EnumType.STRING)
     private SessionType sessionType;
+
+    @OneToOne(mappedBy = "appointment")
+    private ChatSession chatSession;
+    @OneToOne(mappedBy = "appointment")
+    private CallSession callSession;
 
     @CreationTimestamp
     private LocalDateTime createdAt;

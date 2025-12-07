@@ -1,6 +1,8 @@
 package com.kss.astrologer.services;
 
 import com.kss.astrologer.dto.BookingAppointmentDto;
+import com.kss.astrologer.dto.CallSessionDto;
+import com.kss.astrologer.dto.ChatSessionDto;
 import com.kss.astrologer.exceptions.CustomException;
 import com.kss.astrologer.models.*;
 import com.kss.astrologer.repository.AstrologerRepository;
@@ -9,6 +11,7 @@ import com.kss.astrologer.repository.BookingConfigRepository;
 import com.kss.astrologer.request.CreateBookingRequest;
 import com.kss.astrologer.types.BookingStatus;
 import com.kss.astrologer.types.BookingType;
+import com.kss.astrologer.types.ChatStatus;
 import com.kss.astrologer.types.SessionType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +24,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -177,5 +181,36 @@ public class BookingService {
         }
         appointment.setStatus(status);
         return new BookingAppointmentDto(bookingAppointmentRepository.save(appointment));
+    }
+
+    public BookingAppointmentDto createChatSession(UUID appointmentId, SessionType type) {
+        BookingAppointment appointment = bookingAppointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Appointment not found"));
+        if(type == SessionType.CHAT) {
+            ChatSession chatSession = ChatSession.builder()
+                    .astrologer(appointment.getAstrologer())
+                    .user(appointment.getUser())
+                    .startedAt(LocalDateTime.now())
+                    .status(ChatStatus.ACTIVE)
+                    .appointment(appointment)
+                    .totalMinutes(appointment.getAppointmentDuration())
+                    .totalCost(appointment.getTotalCost())
+                    .build();
+            appointment.setChatSession(chatSession);
+            return new BookingAppointmentDto(bookingAppointmentRepository.save(appointment));
+        } else {
+            CallSession callSession = CallSession.builder()
+                    .astrologer(appointment.getAstrologer())
+                    .user(appointment.getUser())
+                    .startedAt(LocalDateTime.now())
+                    .sessionType(type)
+                    .status(ChatStatus.ACTIVE)
+                    .appointment(appointment)
+                    .totalMinutes(appointment.getAppointmentDuration())
+                    .totalCost(appointment.getTotalCost())
+                    .build();
+            appointment.setCallSession(callSession);
+            return new BookingAppointmentDto(bookingAppointmentRepository.save(appointment));
+        }
     }
 }

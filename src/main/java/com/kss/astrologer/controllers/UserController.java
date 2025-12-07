@@ -1,6 +1,8 @@
 package com.kss.astrologer.controllers;
 
 import com.kss.astrologer.request.ChangePasswordRequest;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +30,7 @@ import com.kss.astrologer.types.Role;
 import jakarta.validation.Valid;
 import org.springframework.web.multipart.MultipartFile;
 
+@Tag(name = "User", description = "User details")
 @RestController
 @RequestMapping("/api/v1/users")
 public class UserController {
@@ -43,6 +46,7 @@ public class UserController {
     @Autowired
     private WalletService walletService;
 
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping
     public ResponseEntity<Object> loginUserDetails(@AuthenticationPrincipal CustomUserDetails userDetails) {
         logger.info("Fetching user details for user: {}", userDetails.getUsername());
@@ -57,6 +61,7 @@ public class UserController {
         }
     }
 
+    @SecurityRequirement(name = "bearerAuth")
     @PostMapping
     public ResponseEntity<Object> addUserDetails(@AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody KundliRequest data) {
@@ -80,6 +85,7 @@ public class UserController {
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, "User found successfully", "user", user);
     }
 
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/wallet")
     public ResponseEntity<Object> getWalletDetails(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -98,6 +104,7 @@ public class UserController {
                 transactions.isLast());
     }
 
+    @SecurityRequirement(name = "bearerAuth")
     @PostMapping(value = "/upload/profile-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Object> uploadProfileImage(@AuthenticationPrincipal CustomUserDetails userDetails,
                                                      @RequestPart("image") MultipartFile imgFile){
@@ -105,6 +112,7 @@ public class UserController {
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Uploaded Successfully", "user", userDto);
     }
 
+    @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/change-password")
     public ResponseEntity<Object> changePassword(@AuthenticationPrincipal CustomUserDetails userDetails,
                                                  @RequestBody ChangePasswordRequest request) {

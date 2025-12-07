@@ -32,7 +32,7 @@ import com.kss.astrologer.security.JwtAuthenticationEntryPoint;
 public class SecurityConfig {
 
     public static final String[] PUBLIC_URLS = {"/api/v1/auth/**", "/actuator/health", "/api/v1/admin/create-admin",
-            "/ws-chat/**", "/api/v1/payment/webhook"};
+            "/ws-chat/**", "/api/v1/payment/webhook", "/v3/api-docs/**", "/swagger-ui/**"};
     public static final String[] HOME_PUBLIC_URLS = {"/api/v1/bannar", "/api/v1/astrologers", "/api/v1/astrologers/online/list"};
 
     @Autowired

@@ -6,6 +6,8 @@ import java.util.UUID;
 import com.kss.astrologer.request.OnlineStatusRequest;
 import com.kss.astrologer.request.UpdateAstrologerRequest;
 import com.kss.astrologer.security.CustomUserDetails;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +27,7 @@ import com.kss.astrologer.services.aws.S3Service;
 
 import jakarta.validation.Valid;
 
+@Tag(name = "Astrologer")
 @RestController
 @RequestMapping("/api/v1/astrologers")
 public class AstrologerController {
@@ -55,6 +58,7 @@ public class AstrologerController {
                 "astrologer", astrologer);
     }
 
+    @SecurityRequirement(name = "bearerAuth")
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Object> updateAstrologerById(
             @PathVariable UUID id,

@@ -5,6 +5,8 @@ import com.kss.astrologer.exceptions.CustomException;
 import com.kss.astrologer.handler.ResponseHandler;
 import com.kss.astrologer.security.CustomUserDetails;
 import com.kss.astrologer.services.WithdrawService;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -15,6 +17,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
+@Tag(name = "Withdraw", description = "Withdraw for astrologers")
+@SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequestMapping("/api/v1/withdraw")
 public class WithdrawController {

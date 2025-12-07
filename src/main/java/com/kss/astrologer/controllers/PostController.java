@@ -4,6 +4,8 @@ import com.kss.astrologer.dto.PostDto;
 import com.kss.astrologer.handler.ResponseHandler;
 import com.kss.astrologer.security.CustomUserDetails;
 import com.kss.astrologer.services.PostService;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +20,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.UUID;
 
+@Tag(name = "Post", description = "Astrologer Posts and feeds")
+@SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequestMapping("/api/v1/posts")
 public class PostController {

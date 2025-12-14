@@ -87,7 +87,9 @@ public class BookingService {
         if(request.getBookingType() == BookingType.ONLINE) {
             double totalCost = calculateTotalCost(astrologer, request.getSessionType(),
                     request.getAppointmentDuration());
-            double userBalance = userWallet.getBalance() - userWallet.getLockedBalance();
+            double balance = userWallet.getBalance() != null ? userWallet.getBalance() : 0.0;
+            double lockedBalance = userWallet.getLockedBalance() != null ? userWallet.getLockedBalance() : 0.0;
+            double userBalance = balance - lockedBalance;
             if (userBalance < totalCost) throw new CustomException("Insufficient Balance");
             this.walletService.addLockedBalance(userWallet.getId(), totalCost);
             int otp = this.otpService.generateOtp();
@@ -99,6 +101,7 @@ public class BookingService {
                     .appointmentDuration(request.getAppointmentDuration())
                     .totalCost(totalCost)
                     .otp(otp)
+                    .status(BookingStatus.PENDING)
                     .sessionType(request.getSessionType())
                     .build();
             return bookingAppointmentRepository.save(appointment);
@@ -109,6 +112,7 @@ public class BookingService {
                 .reason(request.getReason())
                 .appointmentDate(request.getAppointmentDate())
                 .appointmentDuration(request.getAppointmentDuration())
+                .status(BookingStatus.PENDING)
                 .bookingType(BookingType.OFFLINE)
                 .sessionType(request.getSessionType())
                 .build();
@@ -160,7 +164,7 @@ public class BookingService {
     }
 
     public Page<BookingAppointmentDto> getAllBookedAppointment(UUID userId, Integer page, Integer size) {
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.Direction.ASC, "createdAt");
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.Direction.DESC, "createdAt");
         Page<BookingAppointment> appointmentPage = bookingAppointmentRepository.findByAstrologer_IdOrUser_Id(userId,
                 userId, pageable);
         return appointmentPage.map(BookingAppointmentDto::new);

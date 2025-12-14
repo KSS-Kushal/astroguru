@@ -7,6 +7,8 @@ import java.util.UUID;
 import com.kss.astrologer.dto.*;
 import com.kss.astrologer.models.Bannar;
 import com.kss.astrologer.services.*;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +37,7 @@ import com.kss.astrologer.services.aws.S3Service;
 
 import jakarta.validation.Valid;
 
+@Tag(name = "Admin")
 @RestController
 @RequestMapping("/api/v1/admin")
 @Validated
@@ -69,6 +72,7 @@ public class AdminController {
         return ResponseHandler.responseBuilder(HttpStatus.CREATED, true, "Admin created successfully");
     }
 
+    @SecurityRequirement(name = "bearerAuth")
     @PostMapping(value = "/astrologer", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Object> createAstrologer(
         @RequestPart("data") @Valid AstrologerRequest astrologerRequest,

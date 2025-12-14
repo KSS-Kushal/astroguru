@@ -2,10 +2,12 @@ package com.kss.astrologer.controllers;
 
 import com.kss.astrologer.dto.PostDto;
 import com.kss.astrologer.handler.ResponseHandler;
+import com.kss.astrologer.request.PostRequest;
 import com.kss.astrologer.security.CustomUserDetails;
 import com.kss.astrologer.services.PostService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -24,6 +27,7 @@ import java.util.UUID;
 @SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequestMapping("/api/v1/posts")
+@Validated
 public class PostController {
     private static final Logger logger = LoggerFactory.getLogger(PostController.class);
 
@@ -33,9 +37,11 @@ public class PostController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Object> createPost(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestPart(value = "text", required = false) String text,
+//            @RequestPart("data") @Valid PostRequest postRequest,
+            @RequestPart("text") String text,
             @RequestPart(value = "images", required = false) List<MultipartFile> images
             ) {
+        logger.info("text" + text);
         PostDto post = postService.createPost(userDetails.getUserId(), text, images);
         return ResponseHandler.responseBuilder(HttpStatus.CREATED, true, "Post created successfully", "post", post);
     }
@@ -66,7 +72,7 @@ public class PostController {
                                                @AuthenticationPrincipal CustomUserDetails userDetails,
                                                @RequestPart("text") String text,
                                                @RequestPart(value = "images", required = false) List<MultipartFile> images) {
-        PostDto post = postService.updatePost(userDetails.getUserId(), id, text, images);
+        PostDto post = postService.updatePost(userDetails.getUserId(), id,text, images);
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Post updated successfully", "post", post);
     }
 

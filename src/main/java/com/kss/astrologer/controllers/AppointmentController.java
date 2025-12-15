@@ -8,6 +8,8 @@ import com.kss.astrologer.request.CreateSessionRequest;
 import com.kss.astrologer.request.UpdateAppointmentStatusRequest;
 import com.kss.astrologer.security.CustomUserDetails;
 import com.kss.astrologer.services.BookingService;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +21,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
+@Tag(name = "Appointment", description = "Book appointment with astrologers")
+@SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequestMapping("/api/v1/appointment")
 public class AppointmentController {

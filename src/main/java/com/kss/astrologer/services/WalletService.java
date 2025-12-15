@@ -85,15 +85,17 @@ public class WalletService {
     }
 
     public Wallet addLockedBalance(UUID walletId, Double amount) {
+        if (amount == null) throw new CustomException("Amount can't be null");
         Wallet wallet = walletRepository.findById(walletId).orElseThrow(() -> new CustomException("Wallet not found"));
-        Double lockedBalance = wallet.getLockedBalance();
+        double lockedBalance = wallet.getLockedBalance() != null ? wallet.getLockedBalance() : 0.0;
         wallet.setLockedBalance(lockedBalance + Math.abs(amount));
         return walletRepository.save(wallet);
     }
 
     public Wallet subtractLockedBalance(UUID walletId, Double amount) {
+        if (amount == null) throw new CustomException("Amount can't be null");
         Wallet wallet = walletRepository.findById(walletId).orElseThrow(() -> new CustomException("Wallet not found"));
-        Double lockedBalance = wallet.getLockedBalance();
+        double lockedBalance = wallet.getLockedBalance() != null ? wallet.getLockedBalance() : 0.0;
         if(Math.abs(amount)>lockedBalance) throw new CustomException("Insufficient Balance");
         wallet.setLockedBalance(lockedBalance - Math.abs(amount));
         return walletRepository.save(wallet);

@@ -10,6 +10,7 @@ import java.util.UUID;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class PostRequest {
+public class UpdatePostRequest {
     private String text;
+    private List<UUID> imageUrls;
 }

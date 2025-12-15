@@ -1,13 +1,11 @@
 package com.kss.astrologer.services;
 
+import com.kss.astrologer.dto.CommentDTO;
+import com.kss.astrologer.dto.LikeDTO;
 import com.kss.astrologer.dto.PostDto;
 import com.kss.astrologer.exceptions.CustomException;
-import com.kss.astrologer.models.AstrologerDetails;
-import com.kss.astrologer.models.Post;
-import com.kss.astrologer.models.PostImage;
-import com.kss.astrologer.repository.AstrologerRepository;
-import com.kss.astrologer.repository.PostImageRepository;
-import com.kss.astrologer.repository.PostRepository;
+import com.kss.astrologer.models.*;
+import com.kss.astrologer.repository.*;
 import com.kss.astrologer.services.aws.S3Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -31,6 +30,12 @@ public class PostService {
 
     @Autowired
     private PostRepository postRepository;
+
+    @Autowired
+    private LikeRepository likeRepository;
+
+    @Autowired
+    private CommentRepository commentRepository;
 
     @Autowired
     private S3Service s3Service;
@@ -65,13 +70,14 @@ public class PostService {
 
         post.setImages(postImages);
 
-        return new PostDto(postRepository.save(post));
+        Post savedPost = postRepository.save(post);
+        return buildPostDtoWithCounts(savedPost);
     }
 
     public Page<PostDto> getAllPost(Integer page, Integer size) {
         Pageable pageable = PageRequest.of(page - 1, size, Sort.Direction.DESC, "createdAt");
         Page<Post> posts = postRepository.findAll(pageable);
-        return posts.map(PostDto::new);
+        return posts.map(this::buildPostDtoWithCounts);
     }
 
     @Transactional
@@ -104,18 +110,94 @@ public class PostService {
         if(images != null && !images.isEmpty()) post.setImages(postImages);
         if(text != null) post.setText(text);
 
-        return new PostDto(postRepository.save(post));
+        Post savedPost = postRepository.save(post);
+        return buildPostDtoWithCounts(savedPost);
     }
 
     public PostDto getPostById(UUID id) {
         Post post = postRepository.findById(id)
                 .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Post not found"));
-        return new PostDto(post);
+        return buildPostDtoWithCounts(post);
     }
 
     public void deletePost(UUID userId, UUID postId) {
         Post post = postRepository.findByIdAndAstrologer_User_Id(postId, userId)
                 .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Post not found or not accessible"));
         postRepository.delete(post);
+    }
+
+    @Transactional
+    public LikeDTO likePost(UUID userId, UUID postId) {
+        if (!postRepository.existsById(postId)) {
+            throw new CustomException(HttpStatus.NOT_FOUND, "Post not found");
+        }
+
+        if (likeRepository.existsByUserIdAndPostId(userId, postId)) {
+            throw new CustomException(HttpStatus.CONFLICT, "Already liked");
+        }
+        Like like = Like.builder()
+                .userId(userId)
+                .postId(postId)
+                .createdAt(LocalDateTime.now())
+                .build();
+        Like savedLike = likeRepository.save(like);
+        return LikeDTO.builder()
+                .id(savedLike.getId())
+                .userId(savedLike.getUserId())
+                .postId(savedLike.getPostId())
+                .createdAt(savedLike.getCreatedAt())
+                .build();
+    }
+
+    @Transactional
+    public void unlikePost(UUID userId, UUID postId) {
+        if (!postRepository.existsById(postId)) {
+            throw new CustomException(HttpStatus.NOT_FOUND, "Post not found");
+        }
+        if (!likeRepository.existsByUserIdAndPostId(userId, postId)) {
+            throw new CustomException(HttpStatus.NOT_FOUND, "Like not found");
+        }
+        likeRepository.deleteByUserIdAndPostId(userId, postId);
+    }
+
+    @Transactional
+    public CommentDTO addComment(UUID userId, UUID postId, String body) {
+        if (!postRepository.existsById(postId)) {
+            throw new CustomException(HttpStatus.NOT_FOUND, "Post not found");
+        }
+        if (body == null || body.trim().isEmpty()) {
+            throw new CustomException(HttpStatus.BAD_REQUEST, "Comment body required");
+        }
+        Comment comment = Comment.builder()
+                .userId(userId)
+                .postId(postId)
+                .body(body)
+                .createdAt(LocalDateTime.now())
+                .build();
+        Comment savedComment = commentRepository.save(comment);
+        return CommentDTO.builder()
+                .id(savedComment.getId())
+                .userId(savedComment.getUserId())
+                .postId(savedComment.getPostId())
+                .body(savedComment.getBody())
+                .createdAt(savedComment.getCreatedAt())
+                .build();
+    }
+
+    @Transactional
+    public void deleteComment(UUID userId, UUID commentId) {
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Comment not found"));
+        if (!comment.getUserId().equals(userId)) {
+            throw new CustomException(HttpStatus.FORBIDDEN, "Cannot delete others' comments");
+        }
+        commentRepository.deleteById(commentId);
+    }
+
+    private PostDto buildPostDtoWithCounts(Post post) {
+        PostDto dto = new PostDto(post);
+        dto.setLikeCount(likeRepository.countByPostId(post.getId()));
+        dto.setCommentCount(commentRepository.countByPostId(post.getId()));
+        return dto;
     }
 }

@@ -12,10 +12,4 @@ import java.util.UUID;
 @Repository
 public interface PostRepository extends JpaRepository<Post, UUID> {
     Optional<Post> findByIdAndAstrologer_User_Id(UUID postId, UUID userId);
-
-    @Query("SELECT COUNT(l) FROM Like l WHERE l.postId = :postId")
-    long countLikesByPostId(@Param("postId") UUID postId);
-
-    @Query("SELECT COUNT(c) FROM Comment c WHERE c.postId = :postId")
-    long countCommentsByPostId(@Param("postId") UUID postId);
 }

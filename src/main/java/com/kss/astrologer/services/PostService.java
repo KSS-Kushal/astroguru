@@ -3,6 +3,7 @@ package com.kss.astrologer.services;
 import com.kss.astrologer.dto.CommentDTO;
 import com.kss.astrologer.dto.LikeDTO;
 import com.kss.astrologer.dto.PostDto;
+import com.kss.astrologer.dto.UserDto;
 import com.kss.astrologer.exceptions.CustomException;
 import com.kss.astrologer.models.*;
 import com.kss.astrologer.repository.*;
@@ -38,6 +39,9 @@ public class PostService {
     private CommentRepository commentRepository;
 
     @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
     private S3Service s3Service;
 
     @Autowired
@@ -71,13 +75,21 @@ public class PostService {
         post.setImages(postImages);
 
         Post savedPost = postRepository.save(post);
-        return buildPostDtoWithCounts(savedPost);
+        PostDto dto = new PostDto(savedPost);
+        dto.setLikeCount(likeRepository.countByPost_Id(savedPost.getId()));
+        dto.setCommentCount(commentRepository.countByPost_Id(savedPost.getId()));
+        return dto;
     }
 
     public Page<PostDto> getAllPost(Integer page, Integer size) {
         Pageable pageable = PageRequest.of(page - 1, size, Sort.Direction.DESC, "createdAt");
         Page<Post> posts = postRepository.findAll(pageable);
-        return posts.map(this::buildPostDtoWithCounts);
+        return posts.map(post -> {
+            PostDto dto = new PostDto(post);
+            dto.setLikeCount(likeRepository.countByPost_Id(post.getId()));
+            dto.setCommentCount(commentRepository.countByPost_Id(post.getId()));
+            return dto;
+        });
     }
 
     @Transactional
@@ -111,15 +123,22 @@ public class PostService {
         if(text != null) post.setText(text);
 
         Post savedPost = postRepository.save(post);
-        return buildPostDtoWithCounts(savedPost);
+        PostDto dto = new PostDto(savedPost);
+        dto.setLikeCount(likeRepository.countByPost_Id(savedPost.getId()));
+        dto.setCommentCount(commentRepository.countByPost_Id(savedPost.getId()));
+        return dto;
     }
 
     public PostDto getPostById(UUID id) {
         Post post = postRepository.findById(id)
                 .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Post not found"));
-        return buildPostDtoWithCounts(post);
+        PostDto dto = new PostDto(post);
+        dto.setLikeCount(likeRepository.countByPost_Id(id));
+        dto.setCommentCount(commentRepository.countByPost_Id(id));
+        return dto;
     }
 
+    @Transactional
     public void deletePost(UUID userId, UUID postId) {
         Post post = postRepository.findByIdAndAstrologer_User_Id(postId, userId)
                 .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Post not found or not accessible"));
@@ -127,77 +146,56 @@ public class PostService {
     }
 
     @Transactional
-    public LikeDTO likePost(UUID userId, UUID postId) {
-        if (!postRepository.existsById(postId)) {
-            throw new CustomException(HttpStatus.NOT_FOUND, "Post not found");
+    public LikeDTO toggleLike(UUID userId, UUID postId) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Post not found"));
+
+        if (likeRepository.existsByUser_IdAndPost_Id(userId, postId)) {
+            likeRepository.deleteByUser_IdAndPost_Id(userId, postId);
+            return null;
         }
 
-        if (likeRepository.existsByUserIdAndPostId(userId, postId)) {
-            throw new CustomException(HttpStatus.CONFLICT, "Already liked");
-        }
-        Like like = Like.builder()
-                .userId(userId)
-                .postId(postId)
-                .createdAt(LocalDateTime.now())
-                .build();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "User not found"));
+
+        Like like = new Like();
+        like.setUser(user);
+        like.setPost(post);
+
         Like savedLike = likeRepository.save(like);
-        return LikeDTO.builder()
-                .id(savedLike.getId())
-                .userId(savedLike.getUserId())
-                .postId(savedLike.getPostId())
-                .createdAt(savedLike.getCreatedAt())
-                .build();
-    }
-
-    @Transactional
-    public void unlikePost(UUID userId, UUID postId) {
-        if (!postRepository.existsById(postId)) {
-            throw new CustomException(HttpStatus.NOT_FOUND, "Post not found");
-        }
-        if (!likeRepository.existsByUserIdAndPostId(userId, postId)) {
-            throw new CustomException(HttpStatus.NOT_FOUND, "Like not found");
-        }
-        likeRepository.deleteByUserIdAndPostId(userId, postId);
+        return new LikeDTO(savedLike.getId(), new UserDto(user), postId, savedLike.getCreatedAt());
     }
 
     @Transactional
     public CommentDTO addComment(UUID userId, UUID postId, String body) {
-        if (!postRepository.existsById(postId)) {
-            throw new CustomException(HttpStatus.NOT_FOUND, "Post not found");
-        }
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Post not found"));
         if (body == null || body.trim().isEmpty()) {
             throw new CustomException(HttpStatus.BAD_REQUEST, "Comment body required");
         }
-        Comment comment = Comment.builder()
-                .userId(userId)
-                .postId(postId)
-                .body(body)
-                .createdAt(LocalDateTime.now())
-                .build();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "User not found"));
+        Comment comment = new Comment();
+        comment.setUser(user);
+        comment.setPost(post);
+        comment.setBody(body.trim());
         Comment savedComment = commentRepository.save(comment);
-        return CommentDTO.builder()
-                .id(savedComment.getId())
-                .userId(savedComment.getUserId())
-                .postId(savedComment.getPostId())
-                .body(savedComment.getBody())
-                .createdAt(savedComment.getCreatedAt())
-                .build();
+        return new CommentDTO(savedComment.getId(), new UserDto(user), postId, savedComment.getBody(), savedComment.getCreatedAt());
     }
 
     @Transactional
     public void deleteComment(UUID userId, UUID commentId) {
-        Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Comment not found"));
-        if (!comment.getUserId().equals(userId)) {
-            throw new CustomException(HttpStatus.FORBIDDEN, "Cannot delete others' comments");
-        }
-        commentRepository.deleteById(commentId);
+        Comment comment = commentRepository.findByIdAndUser_Id(commentId, userId)
+                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Comment not found or unauthorized"));
+        commentRepository.delete(comment);
     }
 
-    private PostDto buildPostDtoWithCounts(Post post) {
-        PostDto dto = new PostDto(post);
-        dto.setLikeCount(likeRepository.countByPostId(post.getId()));
-        dto.setCommentCount(commentRepository.countByPostId(post.getId()));
-        return dto;
+    public Page<CommentDTO> getComments(UUID postId, Integer page, Integer size) {
+        if (!postRepository.existsById(postId)) {
+            throw new CustomException(HttpStatus.NOT_FOUND, "Post not found");
+        }
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by("createdAt").ascending());
+        Page<Comment> comments = commentRepository.findByPost_IdOrderByCreatedAtAsc(postId, pageable);
+        return comments.map(c -> new CommentDTO(c));
     }
 }

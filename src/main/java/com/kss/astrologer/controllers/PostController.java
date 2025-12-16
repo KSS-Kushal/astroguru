@@ -84,16 +84,14 @@ public class PostController {
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Post deleted successfully");
     }
 
-    @PostMapping("/{id}/likes")
-    public ResponseEntity<Object> likePost(@PathVariable UUID id, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        LikeDTO like = postService.likePost(userDetails.getUserId(), id);
-        return ResponseHandler.responseBuilder(HttpStatus.CREATED, true, "Post liked successfully", "like", like);
-    }
-
-    @DeleteMapping("/{id}/likes")
-    public ResponseEntity<Object> unlikePost(@PathVariable UUID id, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        postService.unlikePost(userDetails.getUserId(), id);
-        return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Post unliked successfully");
+    @PutMapping("/{id}/likes")
+    public ResponseEntity<Object> toggleLike(@PathVariable UUID id, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        LikeDTO like = postService.toggleLike(userDetails.getUserId(), id);
+        if (like != null) {
+            return ResponseHandler.responseBuilder(HttpStatus.CREATED, true, "Post liked successfully", "like", like);
+        } else {
+            return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Post unliked successfully");
+        }
     }
 
     @PostMapping("/{id}/comments")
@@ -108,5 +106,13 @@ public class PostController {
     public ResponseEntity<Object> deleteComment(@PathVariable UUID commentId, @AuthenticationPrincipal CustomUserDetails userDetails) {
         postService.deleteComment(userDetails.getUserId(), commentId);
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Comment deleted successfully");
+    }
+
+    @GetMapping("/{id}/comments")
+    public ResponseEntity<Object> getComments(@PathVariable UUID id,
+                                              @RequestParam(defaultValue = "1", required = false) Integer page,
+                                              @RequestParam(defaultValue = "10", required = false) Integer size) {
+        Page<CommentDTO> comments = postService.getComments(id, page, size);
+        return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Comments fetched successfully", "comments", comments);
     }
 }

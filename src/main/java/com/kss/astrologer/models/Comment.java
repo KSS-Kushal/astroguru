@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+
 import java.util.UUID;
 
 import java.time.LocalDateTime;
@@ -18,26 +20,18 @@ import java.time.LocalDateTime;
 public class Comment {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(columnDefinition = "UUID DEFAULT gen_random_uuid()")
     private UUID id;
 
-    @Column(name = "user_id", nullable = false)
-    private UUID userId;
-
-    @Column(name = "post_id", nullable = false)
-    private UUID postId;
-
-    @Column(name = "body", nullable = false, columnDefinition = "TEXT")
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String body;
 
+    @CreationTimestamp
     @Column(name = "created_at")
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", insertable = false, updatable = false)
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "post_id", insertable = false, updatable = false)
     private Post post;
 }

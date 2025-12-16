@@ -11,19 +11,9 @@ import java.util.UUID;
 
 @Repository
 public interface LikeRepository extends JpaRepository<Like, UUID> {
-    // Check if a user has liked a post
-    boolean existsByUserIdAndPostId(UUID userId, UUID postId);
+    boolean existsByUser_IdAndPost_Id(UUID userId, UUID postId);
 
-    // All likes here
-    List<Like> findByPostId(UUID postId);
+    void deleteByUser_IdAndPost_Id(UUID userId, UUID postId);
 
-    // All likes by user
-    List<Like> findByUserId(UUID userId);
-
-    // Remove like
-    void deleteByUserIdAndPostId(UUID userId, UUID postId);
-
-
-    @Query("SELECT COUNT(l) FROM Like l WHERE l.postId = :postId")
-    long countByPostId(@Param("postId") UUID postId); //count likes
+    long countByPost_Id(UUID postId);
 }

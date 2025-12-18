@@ -1,7 +1,5 @@
 package com.kss.astrologer.controllers;
 
-import com.kss.astrologer.dto.CommentDTO;
-import com.kss.astrologer.dto.LikeDTO;
 import com.kss.astrologer.dto.PostDto;
 import com.kss.astrologer.handler.ResponseHandler;
 import com.kss.astrologer.request.PostRequest;
@@ -42,7 +40,7 @@ public class PostController {
 //            @RequestPart("data") @Valid PostRequest postRequest,
             @RequestPart("text") String text,
             @RequestPart(value = "images", required = false) List<MultipartFile> images
-    ) {
+            ) {
         logger.info("text" + text);
         PostDto post = postService.createPost(userDetails.getUserId(), text, images);
         return ResponseHandler.responseBuilder(HttpStatus.CREATED, true, "Post created successfully", "post", post);
@@ -71,9 +69,9 @@ public class PostController {
 
     @PutMapping(path = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Object> updatePost(@PathVariable UUID id,
-                                             @AuthenticationPrincipal CustomUserDetails userDetails,
-                                             @RequestPart("text") String text,
-                                             @RequestPart(value = "images", required = false) List<MultipartFile> images) {
+                                               @AuthenticationPrincipal CustomUserDetails userDetails,
+                                               @RequestPart("text") String text,
+                                               @RequestPart(value = "images", required = false) List<MultipartFile> images) {
         PostDto post = postService.updatePost(userDetails.getUserId(), id,text, images);
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Post updated successfully", "post", post);
     }
@@ -82,37 +80,5 @@ public class PostController {
     public ResponseEntity<Object> deletePost(@PathVariable UUID id, @AuthenticationPrincipal CustomUserDetails userDetails) {
         postService.deletePost(userDetails.getUserId(), id);
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Post deleted successfully");
-    }
-
-    @PutMapping("/{id}/likes")
-    public ResponseEntity<Object> toggleLike(@PathVariable UUID id, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        LikeDTO like = postService.toggleLike(userDetails.getUserId(), id);
-        if (like != null) {
-            return ResponseHandler.responseBuilder(HttpStatus.CREATED, true, "Post liked successfully", "like", like);
-        } else {
-            return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Post unliked successfully");
-        }
-    }
-
-    @PostMapping("/{id}/comments")
-    public ResponseEntity<Object> addComment(@PathVariable UUID id,
-                                             @AuthenticationPrincipal CustomUserDetails userDetails,
-                                             @RequestBody String body) {
-        CommentDTO comment = postService.addComment(userDetails.getUserId(), id, body);
-        return ResponseHandler.responseBuilder(HttpStatus.CREATED, true, "Comment added successfully", "comment", comment);
-    }
-
-    @DeleteMapping("/comments/{commentId}")
-    public ResponseEntity<Object> deleteComment(@PathVariable UUID commentId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        postService.deleteComment(userDetails.getUserId(), commentId);
-        return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Comment deleted successfully");
-    }
-
-    @GetMapping("/{id}/comments")
-    public ResponseEntity<Object> getComments(@PathVariable UUID id,
-                                              @RequestParam(defaultValue = "1", required = false) Integer page,
-                                              @RequestParam(defaultValue = "10", required = false) Integer size) {
-        Page<CommentDTO> comments = postService.getComments(id, page, size);
-        return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Comments fetched successfully", "comments", comments);
     }
 }

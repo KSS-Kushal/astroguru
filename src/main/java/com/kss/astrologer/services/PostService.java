@@ -1,12 +1,13 @@
 package com.kss.astrologer.services;
 
-import com.kss.astrologer.dto.CommentDTO;
-import com.kss.astrologer.dto.LikeDTO;
 import com.kss.astrologer.dto.PostDto;
-import com.kss.astrologer.dto.UserDto;
 import com.kss.astrologer.exceptions.CustomException;
-import com.kss.astrologer.models.*;
-import com.kss.astrologer.repository.*;
+import com.kss.astrologer.models.AstrologerDetails;
+import com.kss.astrologer.models.Post;
+import com.kss.astrologer.models.PostImage;
+import com.kss.astrologer.repository.AstrologerRepository;
+import com.kss.astrologer.repository.PostImageRepository;
+import com.kss.astrologer.repository.PostRepository;
 import com.kss.astrologer.services.aws.S3Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,7 +21,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -31,15 +31,6 @@ public class PostService {
 
     @Autowired
     private PostRepository postRepository;
-
-    @Autowired
-    private LikeRepository likeRepository;
-
-    @Autowired
-    private CommentRepository commentRepository;
-
-    @Autowired
-    private UserRepository userRepository;
 
     @Autowired
     private S3Service s3Service;
@@ -74,22 +65,13 @@ public class PostService {
 
         post.setImages(postImages);
 
-        Post savedPost = postRepository.save(post);
-        PostDto dto = new PostDto(savedPost);
-        dto.setLikeCount(likeRepository.countByPost_Id(savedPost.getId()));
-        dto.setCommentCount(commentRepository.countByPost_Id(savedPost.getId()));
-        return dto;
+        return new PostDto(postRepository.save(post));
     }
 
     public Page<PostDto> getAllPost(Integer page, Integer size) {
         Pageable pageable = PageRequest.of(page - 1, size, Sort.Direction.DESC, "createdAt");
         Page<Post> posts = postRepository.findAll(pageable);
-        return posts.map(post -> {
-            PostDto dto = new PostDto(post);
-            dto.setLikeCount(likeRepository.countByPost_Id(post.getId()));
-            dto.setCommentCount(commentRepository.countByPost_Id(post.getId()));
-            return dto;
-        });
+        return posts.map(PostDto::new);
     }
 
     @Transactional
@@ -122,80 +104,18 @@ public class PostService {
         if(images != null && !images.isEmpty()) post.setImages(postImages);
         if(text != null) post.setText(text);
 
-        Post savedPost = postRepository.save(post);
-        PostDto dto = new PostDto(savedPost);
-        dto.setLikeCount(likeRepository.countByPost_Id(savedPost.getId()));
-        dto.setCommentCount(commentRepository.countByPost_Id(savedPost.getId()));
-        return dto;
+        return new PostDto(postRepository.save(post));
     }
 
     public PostDto getPostById(UUID id) {
         Post post = postRepository.findById(id)
                 .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Post not found"));
-        PostDto dto = new PostDto(post);
-        dto.setLikeCount(likeRepository.countByPost_Id(id));
-        dto.setCommentCount(commentRepository.countByPost_Id(id));
-        return dto;
+        return new PostDto(post);
     }
 
-    @Transactional
     public void deletePost(UUID userId, UUID postId) {
         Post post = postRepository.findByIdAndAstrologer_User_Id(postId, userId)
                 .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Post not found or not accessible"));
         postRepository.delete(post);
-    }
-
-    @Transactional
-    public LikeDTO toggleLike(UUID userId, UUID postId) {
-        Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Post not found"));
-
-        if (likeRepository.existsByUser_IdAndPost_Id(userId, postId)) {
-            likeRepository.deleteByUser_IdAndPost_Id(userId, postId);
-            return null;
-        }
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "User not found"));
-
-        Like like = new Like();
-        like.setUser(user);
-        like.setPost(post);
-
-        Like savedLike = likeRepository.save(like);
-        return new LikeDTO(savedLike.getId(), new UserDto(user), postId, savedLike.getCreatedAt());
-    }
-
-    @Transactional
-    public CommentDTO addComment(UUID userId, UUID postId, String body) {
-        Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Post not found"));
-        if (body == null || body.trim().isEmpty()) {
-            throw new CustomException(HttpStatus.BAD_REQUEST, "Comment body required");
-        }
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "User not found"));
-        Comment comment = new Comment();
-        comment.setUser(user);
-        comment.setPost(post);
-        comment.setBody(body.trim());
-        Comment savedComment = commentRepository.save(comment);
-        return new CommentDTO(savedComment.getId(), new UserDto(user), postId, savedComment.getBody(), savedComment.getCreatedAt());
-    }
-
-    @Transactional
-    public void deleteComment(UUID userId, UUID commentId) {
-        Comment comment = commentRepository.findByIdAndUser_Id(commentId, userId)
-                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Comment not found or unauthorized"));
-        commentRepository.delete(comment);
-    }
-
-    public Page<CommentDTO> getComments(UUID postId, Integer page, Integer size) {
-        if (!postRepository.existsById(postId)) {
-            throw new CustomException(HttpStatus.NOT_FOUND, "Post not found");
-        }
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.by("createdAt").ascending());
-        Page<Comment> comments = commentRepository.findByPost_IdOrderByCreatedAtAsc(postId, pageable);
-        return comments.map(c -> new CommentDTO(c));
     }
 }

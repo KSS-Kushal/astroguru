@@ -9,7 +9,6 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
-
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -20,6 +19,8 @@ public class PostDto {
     private List<PostImage> images;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private long likeCount;
+    private long commentCount;
 
     public PostDto(Post post) {
         this.id = post.getId();
@@ -28,5 +29,7 @@ public class PostDto {
         this.images = post.getImages();
         this.createdAt = post.getCreatedAt();
         this.updatedAt = post.getUpdatedAt();
+        this.likeCount = 0L;
+        this.commentCount = 0L;
     }
 }

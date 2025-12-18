@@ -85,7 +85,7 @@ public class ChatWebSocketController {
 
         List<QueueEntryDto> requests = chatSessionService.getRequestList(chatLeave.getAstrologerId());
         messagingTemplate.convertAndSend("/topic/requests/" + chatLeave.getAstrologerId(), requests);
-        notificationService.sendNotification(chatLeave.getAstrologerId(), chatLeave.getSessionType() + " Request Canceled", "Someone has canceled a "+ chatLeave.getSessionType() +" request.");
+//        notificationService.sendNotification(chatLeave.getAstrologerId(), chatLeave.getSessionType() + " Request Canceled", "Someone has canceled a "+ chatLeave.getSessionType() +" request.");
 
     }
 

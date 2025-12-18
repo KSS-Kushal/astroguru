@@ -50,9 +50,9 @@ public class BookingAppointment {
     @Enumerated(EnumType.STRING)
     private SessionType sessionType;
 
-    @OneToOne(mappedBy = "appointment")
+    @OneToOne(mappedBy = "appointment", cascade = CascadeType.ALL)
     private ChatSession chatSession;
-    @OneToOne(mappedBy = "appointment")
+    @OneToOne(mappedBy = "appointment", cascade = CascadeType.ALL)
     private CallSession callSession;
 
     @CreationTimestamp

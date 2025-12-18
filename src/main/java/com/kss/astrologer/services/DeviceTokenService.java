@@ -37,4 +37,8 @@ public class DeviceTokenService {
         Optional<AstrologerDeviceToken> token = tokenRepo.findByDeviceToken(deviceToken);
         token.ifPresent(astrologerDeviceToken -> tokenRepo.deleteById(astrologerDeviceToken.getId()));
     }
+
+    public List<String> getAllActiveTokensExceptUser(UUID userId) {
+        return tokenRepo.findAllTokensExceptUser(userId);
+    }
 }

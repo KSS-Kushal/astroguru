@@ -3,6 +3,10 @@ package com.kss.astrologer.services;
 import com.kss.astrologer.dto.BookingAppointmentDto;
 import com.kss.astrologer.dto.CallSessionDto;
 import com.kss.astrologer.dto.ChatSessionDto;
+import com.kss.astrologer.events.BookingApprovedEvent;
+import com.kss.astrologer.events.BookingCancelledEvent;
+import com.kss.astrologer.events.BookingRequestEvent;
+import com.kss.astrologer.events.SessionCreatedEvent;
 import com.kss.astrologer.exceptions.CustomException;
 import com.kss.astrologer.models.*;
 import com.kss.astrologer.repository.AstrologerRepository;
@@ -16,12 +20,14 @@ import com.kss.astrologer.types.SessionType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -51,6 +57,10 @@ public class BookingService {
     @Autowired
     private OtpService otpService;
 
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
+
+    @Transactional
     public BookingAppointment bookAppointment(CreateBookingRequest request, UUID userId) {
         User user = userService.getById(userId);
         AstrologerDetails astrologer = astrologerRepository.findByUserId(request.getAstrologerId())
@@ -102,9 +112,20 @@ public class BookingService {
                     .totalCost(totalCost)
                     .otp(otp)
                     .status(BookingStatus.PENDING)
+                    .bookingType(BookingType.ONLINE)
                     .sessionType(request.getSessionType())
                     .build();
-            return bookingAppointmentRepository.save(appointment);
+
+            BookingAppointment saved = bookingAppointmentRepository.save(appointment);
+            // 🔥 Publish event
+            eventPublisher.publishEvent(
+                    new BookingRequestEvent(
+                            appointment.getId(),
+                            appointment.getUser().getId(),
+                            appointment.getAstrologer().getId()
+                    )
+            );
+            return saved;
         }
         BookingAppointment appointment = BookingAppointment.builder()
                 .user(user)
@@ -116,7 +137,17 @@ public class BookingService {
                 .bookingType(BookingType.OFFLINE)
                 .sessionType(request.getSessionType())
                 .build();
-        return bookingAppointmentRepository.save(appointment);
+        BookingAppointment saved = bookingAppointmentRepository.save(appointment);
+
+        // 🔥 Publish event
+        eventPublisher.publishEvent(
+                new BookingRequestEvent(
+                        appointment.getId(),
+                        appointment.getUser().getId(),
+                        appointment.getAstrologer().getId()
+                )
+        );
+        return  saved;
     }
 
     private static int getBookingLimit(Optional<BookingConfig> configOpt, LocalDate appointmentDate) {
@@ -176,6 +207,7 @@ public class BookingService {
         return new BookingAppointmentDto(appointment);
     }
 
+    @Transactional
     public BookingAppointmentDto updateStatus(UUID id, BookingStatus status, Integer otp) {
         BookingAppointment appointment = bookingAppointmentRepository.findById(id)
                 .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Appointment not found"));
@@ -184,7 +216,25 @@ public class BookingService {
                 throw new CustomException("Invalid otp");
         }
         appointment.setStatus(status);
-        return new BookingAppointmentDto(bookingAppointmentRepository.save(appointment));
+        BookingAppointment saved = bookingAppointmentRepository.save(appointment);
+
+        if(status==BookingStatus.CANCELLED) {
+            eventPublisher.publishEvent(
+                    new BookingCancelledEvent(
+                            appointment.getId(),
+                            appointment.getUser().getId()
+                    )
+            );
+        } else if (status == BookingStatus.APPROVED) {
+            eventPublisher.publishEvent(
+                    new BookingApprovedEvent(
+                            appointment.getId(),
+                            appointment.getUser().getId()
+                    )
+            );
+        }
+        if (status == BookingStatus.APPROVED) return createChatSession(appointment.getId(), appointment.getSessionType());
+        return new BookingAppointmentDto(saved);
     }
 
     public BookingAppointmentDto createChatSession(UUID appointmentId, SessionType type) {
@@ -200,8 +250,18 @@ public class BookingService {
                     .totalMinutes(appointment.getAppointmentDuration())
                     .totalCost(appointment.getTotalCost())
                     .build();
+
             appointment.setChatSession(chatSession);
-            return new BookingAppointmentDto(bookingAppointmentRepository.save(appointment));
+            BookingAppointment savedAppointment = bookingAppointmentRepository.save(appointment);
+            eventPublisher.publishEvent(
+                    new SessionCreatedEvent(
+                            appointment.getUser().getId(),
+                            appointment.getAstrologer().getId(),
+                            chatSession.getId(),
+                            SessionType.CHAT
+                    )
+            );
+            return new BookingAppointmentDto(savedAppointment);
         } else {
             CallSession callSession = CallSession.builder()
                     .astrologer(appointment.getAstrologer())
@@ -214,7 +274,18 @@ public class BookingService {
                     .totalCost(appointment.getTotalCost())
                     .build();
             appointment.setCallSession(callSession);
-            return new BookingAppointmentDto(bookingAppointmentRepository.save(appointment));
+
+            BookingAppointment savedAppointment = bookingAppointmentRepository.save(appointment);
+
+            eventPublisher.publishEvent(
+                    new SessionCreatedEvent(
+                            appointment.getUser().getId(),
+                            appointment.getAstrologer().getId(),
+                            callSession.getId(),
+                            type
+                    )
+            );
+            return new BookingAppointmentDto(savedAppointment);
         }
     }
 }

@@ -17,6 +17,7 @@ import com.kss.astrologer.types.SessionType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -74,6 +75,9 @@ public class CallSessionService {
     @Autowired
     private NotificationService notificationService;
 
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
+
     private final Map<UUID, ScheduledFuture<?>> timerTasks = new ConcurrentHashMap<>();
 
     public long requestCall(UUID userId, UUID astrologerId, int requestedMinutes, SessionType type) {
@@ -97,7 +101,7 @@ public class CallSessionService {
         //Notification
         QueueNotificationDto queueNotificationDto = new QueueNotificationDto(userId, type, "New " + type.name() + " call request received");
         messagingTemplate.convertAndSend("/topic/queue/" + astrologerId, queueNotificationDto);
-        notificationService.sendNotification(astrologerId, "New Call Request", "You have received a new call request. Please respond as soon as possible");
+//        notificationService.sendNotification(astrologerId, "New Call Request", "You have received a new call request. Please respond as soon as possible");
 
         List<QueueEntryDto> requests = getRequestList(astrologerId);
         messagingTemplate.convertAndSend("/topic/requests/" + astrologerId, requests);
@@ -117,7 +121,7 @@ public class CallSessionService {
         }
 
         //Notification
-        notificationService.sendNotification(userId, "Call Request Accepted", "Astrologer has accepted your call request. Please join as soon as possible");
+//        notificationService.sendNotification(userId, "Call Request Accepted", "Astrologer has accepted your call request. Please join as soon as possible");
         List<QueueEntryDto> requests = getRequestList(astrologerId);
         messagingTemplate.convertAndSend("/topic/requests/" + astrologerId, requests);
 

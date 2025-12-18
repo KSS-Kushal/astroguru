@@ -64,6 +64,7 @@ public class AstrologerController {
             @PathVariable UUID id,
             @RequestPart("data") @Valid UpdateAstrologerRequest astrologerRequest,
             @RequestPart(value = "image", required = false) MultipartFile imageFile) {
+        logger.info(astrologerRequest.toString());
         String imgUrl = null;
         if (imageFile != null && !imageFile.isEmpty()) {
             imgUrl = s3Service.uploadFile(imageFile, "astrologers");

@@ -1,6 +1,7 @@
 package com.kss.astrologer.services;
 
 import com.kss.astrologer.dto.PostDto;
+import com.kss.astrologer.events.PostCreatedEvent;
 import com.kss.astrologer.exceptions.CustomException;
 import com.kss.astrologer.models.AstrologerDetails;
 import com.kss.astrologer.models.Post;
@@ -12,6 +13,7 @@ import com.kss.astrologer.services.aws.S3Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -41,6 +43,9 @@ public class PostService {
     @Autowired
     private PostImageRepository postImageRepository;
 
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
+
     @Transactional
     public PostDto createPost(UUID userId, String text, List<MultipartFile> images) {
         AstrologerDetails astrologer = astrologerRepository.findByUserId(userId)
@@ -65,7 +70,16 @@ public class PostService {
 
         post.setImages(postImages);
 
-        return new PostDto(postRepository.save(post));
+        Post savedPost = postRepository.save(post);
+
+        eventPublisher.publishEvent(
+                new PostCreatedEvent(
+                        savedPost.getId(),
+                        savedPost.getAstrologer().getId()
+                )
+        );
+
+        return new PostDto(savedPost);
     }
 
     public Page<PostDto> getAllPost(Integer page, Integer size) {

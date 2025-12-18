@@ -78,7 +78,7 @@ public class NotificationServiceImpl implements NotificationService {
     /* ---------------- DIRECT ---------------- */
 
     private void handleDirect(NotificationRequest req) {
-//        save(req.getUserId(), req);
+        save(req.getUserId(), req);
         if (req.isPush()) {
             pushService.sendDirect(req);
         }
@@ -87,7 +87,7 @@ public class NotificationServiceImpl implements NotificationService {
     /* ---------------- CHAT ---------------- */
 
     private void handleChat(NotificationRequest req) {
-//        save(req.getUserId(), req);
+        save(req.getUserId(), req);
 
         // Push only if app closed
         if (req.isPush()) {
@@ -98,9 +98,9 @@ public class NotificationServiceImpl implements NotificationService {
     /* ---------------- BROADCAST ---------------- */
 
     private void handleBroadcast(NotificationRequest req) {
-//        for (UUID userId : req.getUserIds()) {
-//            save(userId, req);
-//        }
+        for (UUID userId : req.getUserIds()) {
+            if (!userId.equals(req.getUserId())) save(userId, req);
+        }
 
         // Push in batches
         pushService.sendBroadcast(req);
@@ -123,7 +123,7 @@ public class NotificationServiceImpl implements NotificationService {
                     .title(req.getTitle())
                     .message(req.getMessage())
                     .actionUrl(req.getActionUrl())
-                    .metadata(objectMapper.writeValueAsString(req.getMetadata()))
+                    .metadata(req.getMetadata())
                     .isRead(false)
                     .build();
 

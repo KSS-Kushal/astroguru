@@ -1,6 +1,7 @@
 package com.kss.astrologer.events;
 
 import com.kss.astrologer.request.NotificationRequest;
+import com.kss.astrologer.services.UserService;
 import com.kss.astrologer.services.notification.NotificationService;
 import com.kss.astrologer.types.NotificationCategory;
 import com.kss.astrologer.types.NotificationType;
@@ -13,13 +14,16 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class NotificationEventListener {
     private final NotificationService notificationService;
+    private final UserService userService;
 
     @Async("notificationExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -105,10 +109,12 @@ public class NotificationEventListener {
         // Usually broadcast → followers
         // Here you can loop followers and send notification
 
+        List<UUID> userIds = userService.getAllUserIds();
         Map<String, Object> map = new HashMap<>();
         map.put("postId", event.getPostId());
         NotificationRequest notificationRequest = NotificationRequest.builder()
                 .userId(event.getUserId())
+                .userIds(userIds)
                 .category(NotificationCategory.BROADCAST)
                 .type(NotificationType.POST_CREATED)
                 .title("New Post")

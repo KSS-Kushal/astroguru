@@ -62,7 +62,7 @@ public class AstrologerController {
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Object> updateAstrologerById(
             @PathVariable UUID id,
-            @RequestPart("data") @Valid UpdateAstrologerRequest astrologerRequest,
+            @RequestPart(value = "test", required = false) UpdateAstrologerRequest astrologerRequest,
             @RequestPart(value = "image", required = false) MultipartFile imageFile) {
         logger.info(astrologerRequest.toString());
         String imgUrl = null;

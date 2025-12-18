@@ -7,8 +7,11 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 @Entity
@@ -42,7 +45,8 @@ public class Notification {
 
     // bookingId, postId, chatId, etc.
     @Column(columnDefinition = "jsonb")
-    private String metadata;
+    @JdbcTypeCode(SqlTypes.JSON)
+    private Map<String, Object> metadata;
 
     private boolean isRead = false;
 

@@ -1,6 +1,7 @@
 package com.kss.astrologer.services;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import com.kss.astrologer.request.ChangePasswordRequest;
@@ -166,5 +167,9 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         user = userRepository.save(user);
         return new UserDto(user);
+    }
+
+    public List<UUID> getAllUserIds() {
+        return userRepository.findAllUserIds();
     }
 }

@@ -12,12 +12,9 @@ import java.util.UUID;
 
 @Repository
 public interface CommentRepository extends JpaRepository<Comment, UUID> {
-
-    Page<Comment> findByPost_IdOrderByCreatedAtAsc(UUID postId, Pageable pageable);
-
-    List<Comment> findByUser_IdOrderByCreatedAtAsc(UUID userId);
-
     long countByPost_Id(UUID postId);
 
     Optional<Comment> findByIdAndUser_Id(UUID id, UUID userId);
+
+    Page<Comment> findByPost_Id(UUID postId, Pageable pageable);
 }

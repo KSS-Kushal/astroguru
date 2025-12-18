@@ -51,5 +51,5 @@ public class Notification {
     private boolean isRead = false;
 
     @CreationTimestamp
-    private LocalDateTime createdAt;
+    private LocalDateTime createdAt = LocalDateTime.now();
 }

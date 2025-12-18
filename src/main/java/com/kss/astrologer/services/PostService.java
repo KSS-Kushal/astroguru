@@ -4,7 +4,6 @@ import com.kss.astrologer.dto.CommentDTO;
 import com.kss.astrologer.dto.LikeDTO;
 import com.kss.astrologer.dto.PostDto;
 import com.kss.astrologer.events.PostCreatedEvent;
-import com.kss.astrologer.dto.UserDto;
 import com.kss.astrologer.exceptions.CustomException;
 import com.kss.astrologer.models.*;
 import com.kss.astrologer.repository.*;
@@ -22,7 +21,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -168,12 +166,10 @@ public class PostService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "User not found"));
 
-        Like like = new Like();
-        like.setUser(user);
-        like.setPost(post);
+        Like like = Like.builder().user(user).post(post).build();
 
         Like savedLike = likeRepository.save(like);
-        return new LikeDTO(savedLike.getId(), new UserDto(user), postId, savedLike.getCreatedAt());
+        return new LikeDTO(savedLike);
     }
 
     @Transactional
@@ -185,12 +181,13 @@ public class PostService {
         }
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "User not found"));
-        Comment comment = new Comment();
-        comment.setUser(user);
-        comment.setPost(post);
-        comment.setBody(body.trim());
+        Comment comment = Comment.builder()
+                .user(user)
+                .post(post)
+                .body(body.trim())
+                .build();
         Comment savedComment = commentRepository.save(comment);
-        return new CommentDTO(savedComment.getId(), new UserDto(user), postId, savedComment.getBody(), savedComment.getCreatedAt());
+        return new CommentDTO(savedComment);
     }
 
     @Transactional
@@ -204,8 +201,8 @@ public class PostService {
         if (!postRepository.existsById(postId)) {
             throw new CustomException(HttpStatus.NOT_FOUND, "Post not found");
         }
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.by("createdAt").ascending());
-        Page<Comment> comments = commentRepository.findByPost_IdOrderByCreatedAtAsc(postId, pageable);
-        return comments.map(c -> new CommentDTO(c));
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.Direction.ASC, "createdAt");
+        Page<Comment> comments = commentRepository.findByPost_Id(postId, pageable);
+        return comments.map(CommentDTO::new);
     }
 }

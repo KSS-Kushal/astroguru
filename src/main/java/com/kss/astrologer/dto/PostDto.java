@@ -29,7 +29,7 @@ public class PostDto {
         this.images = post.getImages();
         this.createdAt = post.getCreatedAt();
         this.updatedAt = post.getUpdatedAt();
-        this.likeCount = 0L;
-        this.commentCount = 0L;
+        this.likeCount = post.getLikes().size();
+        this.commentCount = post.getComments().size();
     }
 }

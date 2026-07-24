@@ -6,6 +6,7 @@ import com.kss.astrologer.request.AuthWithPasswordRequest;
 import com.kss.astrologer.request.RegisterAuthRequest;
 import com.kss.astrologer.security.CustomUserDetails;
 import com.kss.astrologer.services.AstrologerService;
+import com.kss.astrologer.types.NotificationChannel;
 import com.kss.astrologer.types.Role;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,9 +60,11 @@ public class AuthController {
             if (user == null) throw new CustomException(HttpStatus.NOT_FOUND, "Admin not found");
             if (user.getRole() != Role.ADMIN)
                 throw new CustomException(HttpStatus.FORBIDDEN, "You have not Admin access");
+            otpService.sendOtp(authRequest.getMobile(), NotificationChannel.EMAIL);
+        } else {
+            otpService.sendOtp(authRequest.getMobile(), NotificationChannel.SMS);
         }
-        String otp = otpService.sendOtp(authRequest.getMobile());
-        return ResponseHandler.responseBuilder(HttpStatus.OK, true, "OTP sent successfully", "otp", otp);
+        return ResponseHandler.responseBuilder(HttpStatus.OK, true, "OTP sent successfully");
     }
 
     @PostMapping("/verify-otp")

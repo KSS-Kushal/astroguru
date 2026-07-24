@@ -36,7 +36,7 @@ public class NotificationController {
                 "count", count);
     }
 
-    @GetMapping("/read/{id}")
+    @PutMapping("/read/{id}")
     ResponseEntity<Object> markRead(@PathVariable("id")UUID id) {
         notificationService.markRead(id);
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Notification mark read successfully");

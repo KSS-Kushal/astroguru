@@ -2,8 +2,10 @@ package com.kss.astrologer.controllers;
 
 import com.kss.astrologer.dto.CommentDTO;
 import com.kss.astrologer.dto.LikeDTO;
+import com.kss.astrologer.dto.LikeUserDto;
 import com.kss.astrologer.dto.PostDto;
 import com.kss.astrologer.handler.ResponseHandler;
+import com.kss.astrologer.request.LikeRequest;
 import com.kss.astrologer.request.PostRequest;
 import com.kss.astrologer.security.CustomUserDetails;
 import com.kss.astrologer.services.PostService;
@@ -50,16 +52,17 @@ public class PostController {
 
     @GetMapping
     public ResponseEntity<Object> getAllPost(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(defaultValue = "1", required = false) Integer page,
             @RequestParam(defaultValue = "10", required = false) Integer size
     ) {
-        Page<PostDto> posts = postService.getAllPost(page, size);
+        Page<PostDto> posts = postService.getAllPost(userDetails.getUserId(), page, size);
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Posts fetched successfully", "posts", posts);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Object> getPostById(@PathVariable UUID id) {
-        PostDto post = postService.getPostById(id);
+    public ResponseEntity<Object> getPostById(@PathVariable UUID id, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        PostDto post = postService.getPostById(id, userDetails.getUserId());
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Post fetched successfully", "post", post);
     }
 
@@ -85,13 +88,23 @@ public class PostController {
     }
 
     @PutMapping("/{id}/likes")
-    public ResponseEntity<Object> toggleLike(@PathVariable UUID id, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        LikeDTO like = postService.toggleLike(userDetails.getUserId(), id);
-        if (like != null) {
-            return ResponseHandler.responseBuilder(HttpStatus.CREATED, true, "Post liked successfully", "like", like);
+    public ResponseEntity<Object> toggleLike(@PathVariable UUID id,
+                                             @AuthenticationPrincipal CustomUserDetails userDetails,
+                                             @RequestBody LikeRequest body) {
+        boolean liked = postService.toggleLike(userDetails.getUserId(), id, body.getStatus());
+        if (liked) {
+            return ResponseHandler.responseBuilder(HttpStatus.CREATED, true, "Post liked successfully");
         } else {
             return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Post unliked successfully");
         }
+    }
+
+    @GetMapping("/{postId}/likes")
+    public ResponseEntity<Object> getPostLikes(
+            @PathVariable UUID postId
+    ) {
+        List<LikeUserDto> likes = postService.getPostLikes(postId);
+        return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Likes fetched successfully", "likes", likes);
     }
 
     @PostMapping("/{id}/comments")

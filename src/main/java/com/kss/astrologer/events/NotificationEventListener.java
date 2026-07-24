@@ -1,5 +1,7 @@
 package com.kss.astrologer.events;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kss.astrologer.request.NotificationRequest;
 import com.kss.astrologer.services.UserService;
 import com.kss.astrologer.services.notification.NotificationService;
@@ -24,6 +26,7 @@ import java.util.UUID;
 public class NotificationEventListener {
     private final NotificationService notificationService;
     private final UserService userService;
+    private final ObjectMapper objectMapper;
 
     @Async("notificationExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -34,6 +37,7 @@ public class NotificationEventListener {
         Map<String, Object> map = new HashMap<>();
         map.put("bookingId", event.getBookingId());
         map.put("userId", event.getUserId());
+        map.put("type", NotificationType.BOOKING_REQUEST);
         NotificationRequest notificationRequest = NotificationRequest.builder()
                         .userId(event.getAstrologerId())
                         .category(NotificationCategory.DIRECT)
@@ -57,6 +61,7 @@ public class NotificationEventListener {
         Map<String, Object> map = new HashMap<>();
         map.put("bookingId", event.getBookingId());
         map.put("userId", event.getUserId());
+        map.put("type", NotificationType.BOOKING_APPROVED);
         NotificationRequest notificationRequest = NotificationRequest.builder()
                 .userId(event.getUserId())
                 .category(NotificationCategory.DIRECT)
@@ -81,6 +86,7 @@ public class NotificationEventListener {
         Map<String, Object> map = new HashMap<>();
         map.put("bookingId", event.getBookingId());
         map.put("userId", event.getUserId());
+        map.put("type", NotificationType.BOOKING_CANCELLED);
         NotificationRequest notificationRequest = NotificationRequest.builder()
                 .userId(event.getUserId())
                 .category(NotificationCategory.DIRECT)
@@ -112,6 +118,7 @@ public class NotificationEventListener {
         List<UUID> userIds = userService.getAllUserIds();
         Map<String, Object> map = new HashMap<>();
         map.put("postId", event.getPostId());
+        map.put("type", NotificationType.POST_CREATED);
         NotificationRequest notificationRequest = NotificationRequest.builder()
                 .userId(event.getUserId())
                 .userIds(userIds)
@@ -136,6 +143,7 @@ public class NotificationEventListener {
 
         Map<String, Object> map = new HashMap<>();
         map.put("postId", event.getPostId());
+        map.put("type", NotificationType.POST_LIKED);
         NotificationRequest notificationRequest = NotificationRequest.builder()
                 .userId(event.getAstrologerId())
                 .category(NotificationCategory.DIRECT)
@@ -159,6 +167,7 @@ public class NotificationEventListener {
 
         Map<String, Object> map = new HashMap<>();
         map.put("postId", event.getPostId());
+        map.put("type", NotificationType.POST_COMMENTED);
         NotificationRequest notificationRequest = NotificationRequest.builder()
                 .userId(event.getAstrologerId())
                 .category(NotificationCategory.DIRECT)
@@ -179,27 +188,34 @@ public class NotificationEventListener {
        ========================================================= */
 
     @Async("notificationExecutor")
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @EventListener
+//    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onChatMessage(ChatMessageEvent event) {
 
         log.info("ChatMessageEvent for chat {}", event.getChatId());
 
-        Map<String, Object> map = new HashMap<>();
-        map.put("chatId", event.getChatId());
-        map.put("sender", event.getSenderName());
-        NotificationRequest notificationRequest = NotificationRequest.builder()
-                .userId(event.getReceiverId())
-                .category(NotificationCategory.DIRECT)
-                .type(NotificationType.CHAT_MESSAGE)
-                .title(event.getSenderName())
-                .message(event.getMessage())
-                .actionUrl("/chat/" + event.getChatId())
-                .metadata(map)
-                .push(true)
-                .highPriority(true)
-                .build();
+        try {
+            Map<String, Object> map = new HashMap<>();
+            map.put("chatId", event.getChatId());
+            map.put("sender", event.getSenderName());
+            map.put("type", NotificationType.CHAT_MESSAGE);
+            map.put("session", objectMapper.writeValueAsString(event.getSession()));
+            NotificationRequest notificationRequest = NotificationRequest.builder()
+                    .userId(event.getReceiverId())
+                    .category(NotificationCategory.CHAT)
+                    .type(NotificationType.CHAT_MESSAGE)
+                    .title(event.getSenderName())
+                    .message(event.getMessage())
+                    .actionUrl("/chat/" + event.getChatId())
+                    .metadata(map)
+                    .push(true)
+                    .highPriority(true)
+                    .build();
 
-        notificationService.sendNotification(notificationRequest);
+            notificationService.sendNotification(notificationRequest);
+        } catch (Exception e) {
+            log.error("Error to convert JSON");
+        }
     }
 
     @Async("notificationExecutor")
@@ -213,6 +229,7 @@ public class NotificationEventListener {
         map.put("sessionType", event.getSessionType());
         map.put("userId", event.getUserId());
         map.put("astrologerId", event.getUserId());
+        map.put("type", NotificationType.SESSION_CREATED);
         NotificationRequest notificationRequest = NotificationRequest.builder()
                 .userId(event.getUserId())
                 .category(NotificationCategory.DIRECT)
@@ -227,4 +244,9 @@ public class NotificationEventListener {
 
         notificationService.sendNotification(notificationRequest);
     }
+
+    private Map<String, Object> toMap(Object obj) {
+        return objectMapper.convertValue(obj, new TypeReference<>() {});
+    }
+
 }

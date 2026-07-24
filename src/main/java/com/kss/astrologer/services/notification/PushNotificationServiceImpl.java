@@ -78,7 +78,7 @@ public class PushNotificationServiceImpl implements PushNotificationService{
         if (tokens.isEmpty()) return;
 
         // Help mobile app identify chat notification
-        req.getMetadata().put("type", "CHAT");
+//        req.getMetadata().put("type", "CHAT");
 
         sendMulticast(tokens, req, true);
     }

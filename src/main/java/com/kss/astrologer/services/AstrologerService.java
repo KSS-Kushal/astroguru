@@ -98,7 +98,7 @@ public class AstrologerService {
     }
 
     @Transactional
-    public AstrologerDto updateAstrologer(UpdateAstrologerRequest astrologerRequest, UUID astrologerId, String imgUrl) {
+    public AstrologerDto updateAstrologer(UpdateAstrologerRequest astrologerRequest, UUID astrologerId) {
         AstrologerDetails astrologerDetails = astrologerRepository.findById(astrologerId)
                 .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Astrologer not found"));
 
@@ -106,10 +106,10 @@ public class AstrologerService {
 
         if (astrologerRequest.getName() != null)
             user.setName(astrologerRequest.getName());
-        if (imgUrl != null) {
-            if (user.getImgUri() != null) s3Service.deleteFileByUrl(user.getImgUri());
-            user.setImgUri(imgUrl);
-        }
+//        if (imgUrl != null) {
+//            if (user.getImgUri() != null) s3Service.deleteFileByUrl(user.getImgUri());
+//            user.setImgUri(imgUrl);
+//        }
         if (astrologerRequest.getExpertise() != null)
             astrologerDetails.setExpertise(astrologerRequest.getExpertise());
         if (astrologerRequest.getAbout() != null)
@@ -124,6 +124,24 @@ public class AstrologerService {
             astrologerDetails.setPricePerMinuteVoice(astrologerRequest.getPricePerMinuteVoice());
         if (astrologerRequest.getPricePerMinuteVideo() != null)
             astrologerDetails.setPricePerMinuteVideo(astrologerRequest.getPricePerMinuteVideo());
+
+        user.setUpdatedAt(LocalDateTime.now());
+        userRepository.save(user);
+        astrologerDetails = astrologerRepository.save(astrologerDetails);
+        return new AstrologerDto(astrologerDetails);
+    }
+
+    @Transactional
+    public AstrologerDto updateAstrologerProfilePic(UUID astrologerId, String imgUrl) {
+        AstrologerDetails astrologerDetails = astrologerRepository.findById(astrologerId)
+                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Astrologer not found"));
+
+        User user = astrologerDetails.getUser();
+
+        if (imgUrl != null) {
+            if (user.getImgUri() != null) s3Service.deleteFileByUrl(user.getImgUri());
+            user.setImgUri(imgUrl);
+        }
 
         user.setUpdatedAt(LocalDateTime.now());
         userRepository.save(user);

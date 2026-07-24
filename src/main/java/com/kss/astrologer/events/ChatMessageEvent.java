@@ -1,5 +1,6 @@
 package com.kss.astrologer.events;
 
+import com.kss.astrologer.dto.ChatSessionDto;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -12,5 +13,5 @@ public class ChatMessageEvent {
     private UUID chatId;
     private String senderName;
     private String message;
-
+    private ChatSessionDto session;
 }

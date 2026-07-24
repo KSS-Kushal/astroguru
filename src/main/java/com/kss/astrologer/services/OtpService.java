@@ -4,7 +4,9 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.Random;
 
+import com.kss.astrologer.services.email.EmailService;
 import com.kss.astrologer.services.sms.SmsService;
+import com.kss.astrologer.types.NotificationChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,11 +27,14 @@ public class OtpService {
     @Autowired
     private SmsService smsService;
 
+    @Autowired
+    private EmailService emailService;
+
     public int generateOtp() {
         return new Random().nextInt(9000) + 1000;
     }
 
-    public String sendOtp(String mobile) {
+    public String sendOtp(String mobile, NotificationChannel channel) {
         String otp = String.valueOf(generateOtp());
         otpRepository.save(OtpVerification.builder()
                 .mobile(mobile)
@@ -40,8 +45,17 @@ public class OtpService {
 
         // TODO: Integrate with SMS API - Done
         logger.info("OTP for {}: {}", mobile, otp);
-        String sms = smsService.sendSms(mobile, otp);
-        logger.info(sms);
+        switch (channel) {
+            case SMS -> {
+                String sms = smsService.sendSms(mobile, otp);
+                logger.info(sms);
+            }
+            case EMAIL -> {
+                emailService.sendOtpEmail(mobile, otp);
+            }
+            default -> logger.warn("Channel not configured");
+        }
+
         return otp;
     }
 

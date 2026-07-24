@@ -1,11 +1,14 @@
 package com.kss.astrologer.services;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 import com.kss.astrologer.models.User;
 import com.kss.astrologer.repository.UserRepository;
+import io.github.cdimascio.dotenv.Dotenv;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -32,6 +35,12 @@ public class WalletService {
 
     @Autowired
     private WalletTransactionRepository walletTransactionRepository;
+
+    private final Dotenv dotenv = Dotenv.configure()
+            .ignoreIfMalformed()
+            .ignoreIfMissing()
+            .load();
+    private final Integer bonusPercentage = Integer.valueOf(Objects.requireNonNull(dotenv.get("BONUS_PERCENTAGE")));
 
     public Wallet getWalletByUserId(UUID userId) {
         return walletRepository.findByUserId(userId).orElse(null);
@@ -133,7 +142,8 @@ public class WalletService {
 
         if (type == TransactionType.CREDIT) {
             if(isFirstTopUp) {
-                walletDto = creditBalance(wallet.getUser().getId(), transaction.getAmount() * 0.5, "TopUp Cashback");
+                walletDto = creditBalance(wallet.getUser().getId(), transaction.getAmount() * bonusPercentage * 0.01,
+                        "TopUp Cashback");
                 User user = wallet.getUser();
                 user.setIsFirstTopUpDone(true);
                 userRepository.save(user);

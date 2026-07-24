@@ -2,10 +2,8 @@ package com.kss.astrologer.services.notification;
 
 import com.kss.astrologer.models.Notification;
 import com.kss.astrologer.request.NotificationRequest;
-import com.kss.astrologer.types.NotificationType;
 import org.springframework.data.domain.Page;
 
-import java.util.Map;
 import java.util.UUID;
 
 public interface NotificationService {

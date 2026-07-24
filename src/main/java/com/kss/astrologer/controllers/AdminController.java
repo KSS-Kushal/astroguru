@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import com.kss.astrologer.dto.*;
 import com.kss.astrologer.models.Bannar;
+import com.kss.astrologer.models.TopBannar;
 import com.kss.astrologer.services.*;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -127,6 +128,12 @@ public class AdminController {
     public ResponseEntity<Object> deleteBannar(@PathVariable UUID id) {
         Bannar bannar = bannarService.deleteBannar(id);
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Bannar Deleted Successfully", "bannar", bannar);
+    }
+
+    @PostMapping(value = "/upload-bannar/top", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Object> uploadTopBannar(@RequestPart("image") MultipartFile imageFile) {
+        TopBannar bannar = bannarService.uploadTopBannar(imageFile);
+        return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Bannar Uploaded Successfully", "bannar", bannar);
     }
 
     @GetMapping("/reset-password/{id}")

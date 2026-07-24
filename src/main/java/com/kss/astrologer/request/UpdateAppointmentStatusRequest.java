@@ -5,6 +5,5 @@ import lombok.Data;
 
 @Data
 public class UpdateAppointmentStatusRequest {
-    private Integer otp;
     private BookingStatus status;
 }

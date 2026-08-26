@@ -2,6 +2,7 @@ package com.kss.astrologer.controllers;
 
 import com.kss.astrologer.dto.CallSessionDto;
 import com.kss.astrologer.handler.ResponseHandler;
+import com.kss.astrologer.request.CallNotificationRequest;
 import com.kss.astrologer.request.CallRequest;
 import com.kss.astrologer.security.CustomUserDetails;
 import com.kss.astrologer.services.CallSessionService;
@@ -49,5 +50,12 @@ public class CallController {
         Page<CallSessionDto> callHistory = callSessionService.getHistory(userDetails.getUserId(), page, size);
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Chat history fetched successfully", "chatHistory",
                 callHistory);
+    }
+
+    @PostMapping("/send/notification")
+    public ResponseEntity<Object> sendCallNotification(@AuthenticationPrincipal CustomUserDetails userDetails,
+                                                       @RequestBody CallNotificationRequest request) {
+        String roomId = callSessionService.sendCallNotification(userDetails.getUserId(), request);
+        return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Call notification sent successfully", "roomId", roomId);
     }
 }

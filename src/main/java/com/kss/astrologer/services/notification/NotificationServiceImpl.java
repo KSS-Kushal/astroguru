@@ -73,6 +73,8 @@ public class NotificationServiceImpl implements NotificationService {
 
             case CHAT -> handleChat(request);
 
+            case CALL -> handleCall(request);
+
             case BROADCAST -> handleBroadcast(request);
 
             case SILENT -> handleSilent(request);
@@ -86,6 +88,16 @@ public class NotificationServiceImpl implements NotificationService {
         if (req.isPush()) {
             if(notification != null) req.getMetadata().put("id", notification.getId());
             pushService.sendDirect(req);
+        }
+    }
+
+    /* ---------------- CALL ---------------- */
+
+    private void handleCall(NotificationRequest req) {
+        Notification notification = save(req.getUserId(), req);
+        if (req.isPush()) {
+            if(notification != null) req.getMetadata().put("id", notification.getId());
+            pushService.sendCallSignal(req);
         }
     }
 

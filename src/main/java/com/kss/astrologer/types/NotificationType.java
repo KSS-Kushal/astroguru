@@ -8,5 +8,6 @@ public enum NotificationType {
     POST_LIKED,
     POST_COMMENTED,
     CHAT_MESSAGE,
-    SESSION_CREATED
+    SESSION_CREATED,
+    INCOMING_CALL
 }

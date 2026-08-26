@@ -8,6 +8,8 @@ public interface PushNotificationService {
 
     void sendChat(NotificationRequest request);
 
+    void sendCallSignal(NotificationRequest request);
+
     void sendBroadcast(NotificationRequest request);
 
     void sendSilent(NotificationRequest request);

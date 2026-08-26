@@ -4,5 +4,6 @@ public enum NotificationCategory {
     BROADCAST,     // post → all users / followers
     DIRECT,        // booking, like, comment
     CHAT,          // message
-    SILENT         // background update
+    SILENT,         // background update
+    CALL
 }

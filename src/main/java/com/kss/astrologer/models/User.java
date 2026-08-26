@@ -58,6 +58,7 @@ public class User {
     private Role role; // USER, ASTROLOGER, ADMIN
 
     private boolean isFreeChatUsed = false; // Only for USER
+    private boolean isFreeChatBooked = false; // Only for USER
     private Boolean isFirstTopUpDone = false;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)

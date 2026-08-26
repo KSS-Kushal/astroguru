@@ -16,7 +16,9 @@ import com.kss.astrologer.request.CallEnd;
 import com.kss.astrologer.request.ChatLeave;
 import com.kss.astrologer.services.*;
 import com.kss.astrologer.services.notification.NotificationService;
+import com.kss.astrologer.types.ChatStatus;
 import com.kss.astrologer.types.NotificationType;
+import com.kss.astrologer.types.SessionType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -65,6 +67,11 @@ public class ChatWebSocketController {
     public void sendMessage(@Payload ChatMessageDto dto) {
         // Convert DTO to entity
         ChatSession session = chatSessionService.getSessionById(dto.getSessionId());
+        if (session.getStatus() == ChatStatus.ENDED) {
+            QueueNotificationDto queueNotificationDto = new QueueNotificationDto(dto.getSenderId(), SessionType.CHAT,
+                    "Chat is ended");
+            messagingTemplate.convertAndSend("/topic/chat/" + dto.getSenderId() + "/error", queueNotificationDto);
+        }
         User sender = userService.getById(dto.getSenderId());
         User receiver = userService.getById(dto.getReceiverId());
 

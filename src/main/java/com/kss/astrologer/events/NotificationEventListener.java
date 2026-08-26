@@ -245,6 +245,36 @@ public class NotificationEventListener {
         notificationService.sendNotification(notificationRequest);
     }
 
+    @Async("notificationExecutor")
+    @EventListener
+    public void onCallStarted(CallStartedEvent event) {
+        log.info("CallStartedEvent for call {}", event.getCode());
+
+        try {
+            Map<String, Object> map = new HashMap<>();
+            map.put("roomId", event.getCode());
+            map.put("callerId", event.getSenderId());
+            map.put("callerName", event.getSenderName());
+            map.put("type", NotificationType.INCOMING_CALL);
+            map.put("sessionType", event.getSessionType());
+            NotificationRequest notificationRequest = NotificationRequest.builder()
+                    .userId(event.getReceiverId())
+                    .category(NotificationCategory.CALL)
+                    .type(NotificationType.INCOMING_CALL)
+                    .title(event.getSenderName() + "calling you...")
+                    .message("Your Call Session is started please join")
+                    .actionUrl("/call/" + event.getCode())
+                    .metadata(map)
+                    .push(true)
+                    .highPriority(true)
+                    .build();
+
+            notificationService.sendNotification(notificationRequest);
+        } catch (Exception e) {
+            log.error("Error to convert JSON");
+        }
+    }
+
     private Map<String, Object> toMap(Object obj) {
         return objectMapper.convertValue(obj, new TypeReference<>() {});
     }

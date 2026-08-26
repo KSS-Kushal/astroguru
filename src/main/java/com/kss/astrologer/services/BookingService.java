@@ -9,9 +9,7 @@ import com.kss.astrologer.events.BookingRequestEvent;
 import com.kss.astrologer.events.SessionCreatedEvent;
 import com.kss.astrologer.exceptions.CustomException;
 import com.kss.astrologer.models.*;
-import com.kss.astrologer.repository.AstrologerRepository;
-import com.kss.astrologer.repository.BookingAppointmentRepository;
-import com.kss.astrologer.repository.BookingConfigRepository;
+import com.kss.astrologer.repository.*;
 import com.kss.astrologer.request.CreateBookingRequest;
 import com.kss.astrologer.types.BookingStatus;
 import com.kss.astrologer.types.BookingType;
@@ -49,10 +47,16 @@ public class BookingService {
     private UserService userService;
 
     @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
     private AdminService adminService;
 
     @Autowired
     private AstrologerRepository astrologerRepository;
+
+    @Autowired
+    private ChatSessionRepository chatSessionRepository;
 
     @Autowired
     private WalletService walletService;
@@ -80,26 +84,43 @@ public class BookingService {
             throw new CustomException(HttpStatus.BAD_REQUEST, "Appointment date cannot be in the past");
         }
 
-        // 2. Find BookingConfig for astrologer (via astrologer Id)
-        Optional<BookingConfig> configOpt =
-                bookingConfigRepository.findByAstrologer_Id(astrologer.getId());
-
-        int bookingLimit = getBookingLimit(configOpt, appointmentDate);
-
-        // 4. Check daily booking limit
-        long existingBookings = bookingAppointmentRepository
-                .countByAstrologer_IdAndAppointmentDate(astrologer.getUser().getId(), appointmentDate);
-
-        if (existingBookings >= bookingLimit) {
-            throw new CustomException(HttpStatus.BAD_REQUEST,
-                    "Booking limit reached for this astrologer on this date");
-        }
+        // 2. Find BookingConfig for astrologer (via astrologer id)
+//        Optional<BookingConfig> configOpt =
+//                bookingConfigRepository.findByAstrologer_Id(astrologer.getId());
+//
+//        int bookingLimit = getBookingLimit(configOpt, appointmentDate);
+//
+//        // 4. Check daily booking limit
+//        long existingBookings = bookingAppointmentRepository
+//                .countByAstrologer_IdAndAppointmentDate(astrologer.getUser().getId(), appointmentDate);
+//
+//        if (existingBookings >= bookingLimit) {
+//            throw new CustomException(HttpStatus.BAD_REQUEST,
+//                    "Booking limit reached for this astrologer on this date");
+//        }
 
         Wallet userWallet = user.getWallet();
 
         if(request.getBookingType() == BookingType.ONLINE) {
             double totalCost = calculateTotalCost(astrologer, request.getSessionType(),
                     request.getAppointmentDuration());
+            boolean isFreeBooking = false;
+//            logger.info("request isFreeBooking: {}, !isFreeChatUsed: {}, getAppointmentDuration:{}",
+//                    request.isFreeBooking(),
+//                    !user.isFreeChatUsed(),
+//                    request.getAppointmentDuration());
+            if (!user.isFreeChatUsed() && !user.isFreeChatBooked() && request.getAppointmentDuration() <= 2) {
+                totalCost = 0.0;
+                isFreeBooking = true;
+                logger.info("Total Cost: {}", totalCost);
+                user.setFreeChatBooked(true);
+                userRepository.save(user);
+            }
+//            logger.info("request isFreeBooking: {}, !isFreeChatUsed:{}, getAppointmentDuration:{}",
+//                    request.isFreeBooking(),
+//                    !user.isFreeChatUsed(),
+//                    request.getAppointmentDuration());
+//            logger.info("Total Cost: {}", totalCost);
             double balance = userWallet.getBalance() != null ? userWallet.getBalance() : 0.0;
             double lockedBalance = userWallet.getLockedBalance() != null ? userWallet.getLockedBalance() : 0.0;
             double userBalance = balance - lockedBalance;
@@ -113,6 +134,7 @@ public class BookingService {
                     .appointmentDate(request.getAppointmentDate())
                     .appointmentDuration(request.getAppointmentDuration())
                     .totalCost(totalCost)
+                    .freeBooking(isFreeBooking)
                     .otp(otp)
                     .status(BookingStatus.PENDING)
                     .bookingType(BookingType.ONLINE)
@@ -255,12 +277,33 @@ public class BookingService {
             walletService.creditBalance(adminService.getAdminId(), adminProfit,
                     "Session with astrologer " + saved.getAstrologer().getName() +
                     " for " + saved.getAppointmentDuration() + " minutes.");
+
+            if (saved.getSessionType() == SessionType.CHAT) {
+                ChatSession chatSession = saved.getChatSession();
+                if (chatSession != null) {
+                    chatSession.setStatus(ChatStatus.ENDED);
+                    chatSessionRepository.save(chatSession);
+                }
+            }
+
+            if (saved.isFreeBooking()) {
+                User user = userService.getById(saved.getUser().getId());
+                user.setFreeChatUsed(true);
+                user.setFreeChatBooked(true);
+                userRepository.save(user);
+            }
         }
 
         if (status == BookingStatus.CANCELLED && saved.getBookingType() == BookingType.ONLINE) {
             Wallet userWallet = saved.getUser().getWallet();
             double cost = saved.getTotalCost();
             walletService.subtractLockedBalance(userWallet.getId(), cost);
+
+            if (saved.isFreeBooking()) {
+                User user = userService.getById(saved.getUser().getId());
+                user.setFreeChatBooked(false);
+                userRepository.save(user);
+            }
         }
         if (status == BookingStatus.APPROVED) return createChatSession(appointment.getId(), appointment.getSessionType());
         return new BookingAppointmentDto(saved);

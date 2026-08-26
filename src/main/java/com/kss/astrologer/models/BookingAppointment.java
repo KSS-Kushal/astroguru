@@ -40,6 +40,7 @@ public class BookingAppointment {
     private LocalDate appointmentDate;
     private int appointmentDuration;
     private Double totalCost;
+    private boolean freeBooking;
 
     private int otp;
 

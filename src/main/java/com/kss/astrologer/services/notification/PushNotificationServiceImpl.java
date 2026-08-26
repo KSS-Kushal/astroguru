@@ -83,9 +83,16 @@ public class PushNotificationServiceImpl implements PushNotificationService{
         sendMulticast(tokens, req, true);
     }
 
+    @Override
+    public void sendCallSignal(NotificationRequest request) {
+        List<String> tokens = deviceTokenService.getTokens(request.getUserId());
+        if (tokens.isEmpty()) return;
+        sendCallSignal(tokens, request);
+    }
+
     /* =====================================================
-       BROADCAST (Post → All users)
-       ===================================================== */
+           BROADCAST (Post → All users)
+           ===================================================== */
     @Override
     public void sendBroadcast(NotificationRequest req) {
 
@@ -169,6 +176,33 @@ public class PushNotificationServiceImpl implements PushNotificationService{
 
                     // 📦 Data payload
                     .putAllData(convertToStringMap(req.getMetadata()))
+                    .build();
+
+            FirebaseMessaging.getInstance()
+                    .sendEachForMulticast(message);
+
+        } catch (Exception e) {
+            log.error("FCM push failed", e);
+        }
+    }
+
+    private void sendCallSignal(List<String> tokens, NotificationRequest request) {
+        try {
+            if (request.getActionUrl() != null) {
+                request.getMetadata().put("actionUrl", request.getActionUrl());
+            }
+            MulticastMessage message = MulticastMessage.builder()
+                    .addAllTokens(tokens)
+
+                    // 🔥 Android config (HIGH priority + custom sound)
+                    .setAndroidConfig(
+                            AndroidConfig.builder()
+                                    .setPriority(AndroidConfig.Priority.HIGH)
+                                    .build()
+                    )
+
+                    // 📦 Data payload
+                    .putAllData(convertToStringMap(request.getMetadata()))
                     .build();
 
             FirebaseMessaging.getInstance()

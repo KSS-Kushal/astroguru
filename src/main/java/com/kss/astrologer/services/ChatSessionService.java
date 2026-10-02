@@ -20,6 +20,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort.Direction;
+import org.springframework.http.HttpStatus;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Service;
@@ -100,7 +101,7 @@ public class ChatSessionService {
         // Notification
         QueueNotificationDto queueNotificationDto = new QueueNotificationDto(userId, SessionType.CHAT, "New chat request received");
         messagingTemplate.convertAndSend("/topic/queue/" + astrologerId, queueNotificationDto);
-        notificationService.sendNotification(astrologerId, "New Chat Request", "Someone has requested a chat with you. Please respond as soon as possible");
+//        notificationService.sendNotification(astrologerId, "New Chat Request", "Someone has requested a chat with you. Please respond as soon as possible");
 
         List<QueueEntryDto> requests = getRequestList(astrologerId);
         messagingTemplate.convertAndSend("/topic/requests/" + astrologerId, requests);
@@ -117,7 +118,7 @@ public class ChatSessionService {
         int duration = queueService.parseRequestedMinutes(entry);
 
         //Notification
-        notificationService.sendNotification(userId, "Chat Request Accepted", "Astrologer has accepted your chat request. Please join as soon as possible");
+//        notificationService.sendNotification(userId, "Chat Request Accepted", "Astrologer has accepted your chat request. Please join as soon as possible");
         List<QueueEntryDto> requests = getRequestList(astrologerId);
         messagingTemplate.convertAndSend("/topic/requests/" + astrologerId, requests);
 
@@ -136,7 +137,7 @@ public class ChatSessionService {
         //Notification
         QueueNotificationDto queueNotificationDto = new QueueNotificationDto(astrologerId, sessionType, "Sorry, the astrologer is currently unavailable");
         messagingTemplate.convertAndSend("/topic/queue/" + userId, queueNotificationDto);
-        notificationService.sendNotification(userId, "Your Request is Canceled", "Sorry, the astrologer is currently unavailable.");
+//        notificationService.sendNotification(userId, "Your Request is Canceled", "Sorry, the astrologer is currently unavailable.");
 
         List<QueueEntryDto> requests = getRequestList(astrologerId);
         messagingTemplate.convertAndSend("/topic/requests/" + astrologerId, requests);
@@ -319,5 +320,10 @@ public class ChatSessionService {
         long minutes = totalSeconds / 60;
         long seconds = totalSeconds % 60;
         return String.format("%02d:%02d", minutes, seconds);
+    }
+
+    public ChatSessionDto getChatSession(UUID id) {
+        ChatSession chatSession = this.getSessionById(id);
+        return new ChatSessionDto(chatSession);
     }
 }

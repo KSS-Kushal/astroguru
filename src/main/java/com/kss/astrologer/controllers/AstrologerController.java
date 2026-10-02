@@ -59,18 +59,28 @@ public class AstrologerController {
     }
 
     @SecurityRequirement(name = "bearerAuth")
-    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PutMapping(value = "/{id}")
     public ResponseEntity<Object> updateAstrologerById(
             @PathVariable UUID id,
-            @RequestPart("data") @Valid UpdateAstrologerRequest astrologerRequest,
-            @RequestPart(value = "image", required = false) MultipartFile imageFile) {
+            @RequestBody @Valid UpdateAstrologerRequest astrologerRequest) {
+        AstrologerDto updatedAstrologer = astrologerService.updateAstrologer(astrologerRequest, id);
+        logger.info("Updated Astrologer details for ID: {}", id);
+        return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Astrologer details updated successfully",
+                "astrologer", updatedAstrologer);
+    }
+
+    @SecurityRequirement(name = "bearerAuth")
+    @PostMapping(value = "/profile-pic/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Object> updateAstrologerById(
+            @PathVariable UUID id,
+            @RequestPart(value = "image") MultipartFile imageFile) {
         String imgUrl = null;
         if (imageFile != null && !imageFile.isEmpty()) {
             imgUrl = s3Service.uploadFile(imageFile, "astrologers");
         }
-        AstrologerDto updatedAstrologer = astrologerService.updateAstrologer(astrologerRequest, id, imgUrl);
-        logger.info("Updated Astrologer details for ID: {}", id);
-        return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Astrologer details updated successfully",
+        AstrologerDto updatedAstrologer = astrologerService.updateAstrologerProfilePic(id, imgUrl);
+        logger.info("Updated Astrologer Profile for ID: {}", id);
+        return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Astrologer profile pic updated successfully",
                 "astrologer", updatedAstrologer);
     }
 

@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ChatMessageDto {
+    private UUID id;
     private UUID sessionId;
     private MessageType type; // "CHAT" or "IMAGE"
     private UUID senderId;
@@ -21,6 +22,7 @@ public class ChatMessageDto {
     private LocalDateTime timestamp;
 
     public ChatMessageDto(ChatMessage chatMessage) {
+        this.id = chatMessage.getId();
         this.sessionId = chatMessage.getSession().getId();
         this.type = chatMessage.getMessageType();
         this.senderId = chatMessage.getSender().getId();

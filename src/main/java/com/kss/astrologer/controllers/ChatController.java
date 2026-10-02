@@ -126,4 +126,11 @@ public class ChatController {
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Session fetched successfully", "session",
                     callSession);
     }
+
+    @GetMapping("/session-details/{sessionId}")
+    public ResponseEntity<Object> getChatSessionById(@PathVariable UUID sessionId) {
+        ChatSessionDto chatSession = chatSessionService.getChatSession(sessionId);
+        return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Session fetched successfully", "session",
+                chatSession);
+    }
 }

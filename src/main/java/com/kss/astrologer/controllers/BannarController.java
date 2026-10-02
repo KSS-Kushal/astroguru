@@ -2,6 +2,7 @@ package com.kss.astrologer.controllers;
 
 import com.kss.astrologer.handler.ResponseHandler;
 import com.kss.astrologer.models.Bannar;
+import com.kss.astrologer.models.TopBannar;
 import com.kss.astrologer.services.BannarService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -23,6 +24,13 @@ public class BannarController {
     public ResponseEntity<Object> getAllBannars() {
         List<Bannar> bannars = bannarService.getBannar();
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Bannar Fetched Successfully", "bannars", bannars);
+    }
+
+    @GetMapping("/top")
+    public ResponseEntity<Object> getTopBannar() {
+        TopBannar bannars = bannarService.getTopBannar();
+        return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Top Bannar Fetched Successfully", "bannar",
+                bannars);
     }
 
 }

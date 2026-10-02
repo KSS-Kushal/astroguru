@@ -40,6 +40,7 @@ public class BookingAppointment {
     private LocalDate appointmentDate;
     private int appointmentDuration;
     private Double totalCost;
+    private boolean freeBooking;
 
     private int otp;
 
@@ -50,9 +51,9 @@ public class BookingAppointment {
     @Enumerated(EnumType.STRING)
     private SessionType sessionType;
 
-    @OneToOne(mappedBy = "appointment")
+    @OneToOne(mappedBy = "appointment", cascade = CascadeType.ALL)
     private ChatSession chatSession;
-    @OneToOne(mappedBy = "appointment")
+    @OneToOne(mappedBy = "appointment", cascade = CascadeType.ALL)
     private CallSession callSession;
 
     @CreationTimestamp

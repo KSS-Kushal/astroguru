@@ -1,16 +1,26 @@
 package com.kss.astrologer.controllers;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import com.kss.astrologer.dto.*;
+import com.kss.astrologer.events.BookingRequestEvent;
+import com.kss.astrologer.events.ChatMessageEvent;
+import com.kss.astrologer.models.Notification;
+import com.kss.astrologer.repository.NotificationRepository;
 import com.kss.astrologer.request.ActiveSessionRequest;
 import com.kss.astrologer.request.CallEnd;
 import com.kss.astrologer.request.ChatLeave;
 import com.kss.astrologer.services.*;
 import com.kss.astrologer.services.notification.NotificationService;
+import com.kss.astrologer.types.ChatStatus;
+import com.kss.astrologer.types.NotificationType;
+import com.kss.astrologer.types.SessionType;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -44,13 +54,24 @@ public class ChatWebSocketController {
     @Autowired
     private OnlineUserService onlineUserService;
 
+//    @Autowired
+//    private NotificationService notificationService;
+
     @Autowired
-    private NotificationService notificationService;
+    private ApplicationEventPublisher eventPublisher;
+
+    @Autowired
+    private NotificationRepository notificationRepository;
 
     @MessageMapping("/chat.send")
     public void sendMessage(@Payload ChatMessageDto dto) {
         // Convert DTO to entity
         ChatSession session = chatSessionService.getSessionById(dto.getSessionId());
+        if (session.getStatus() == ChatStatus.ENDED) {
+            QueueNotificationDto queueNotificationDto = new QueueNotificationDto(dto.getSenderId(), SessionType.CHAT,
+                    "Chat is ended");
+            messagingTemplate.convertAndSend("/topic/chat/" + dto.getSenderId() + "/error", queueNotificationDto);
+        }
         User sender = userService.getById(dto.getSenderId());
         User receiver = userService.getById(dto.getReceiverId());
 
@@ -68,6 +89,35 @@ public class ChatWebSocketController {
         ChatMessageDto chatMessageDto = new ChatMessageDto(saved);
         // Send to receiver
         messagingTemplate.convertAndSend("/topic/chat/" + chatMessageDto.getReceiverId() + "/messages", chatMessageDto);
+
+        if (!onlineUserService.isOnline(chatMessageDto.getReceiverId())) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("chatId", chatMessageDto.getId());
+            map.put("sender", saved.getSender().getName());
+            map.put("type", NotificationType.CHAT_MESSAGE);
+            map.put("session", new ChatSessionDto(session));
+            Notification notification = Notification.builder()
+                    .userId(chatMessageDto.getReceiverId())
+                    .type(NotificationType.CHAT_MESSAGE)
+                    .title(saved.getSender().getName())
+                    .message(chatMessageDto.getMessage())
+                    .actionUrl("/chat/" + chatMessageDto.getId())
+                    .metadata(map)
+                    .isRead(false)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+
+            notificationRepository.save(notification);
+        }
+        eventPublisher.publishEvent(
+                new ChatMessageEvent(
+                        chatMessageDto.getReceiverId(),
+                        chatMessageDto.getId(),
+                        saved.getSender().getName(),
+                        chatMessageDto.getMessage(),
+                        new ChatSessionDto(session)
+                )
+        );
     }
 
     @MessageMapping("/chat.typing")
@@ -85,7 +135,7 @@ public class ChatWebSocketController {
 
         List<QueueEntryDto> requests = chatSessionService.getRequestList(chatLeave.getAstrologerId());
         messagingTemplate.convertAndSend("/topic/requests/" + chatLeave.getAstrologerId(), requests);
-        notificationService.sendNotification(chatLeave.getAstrologerId(), chatLeave.getSessionType() + " Request Canceled", "Someone has canceled a "+ chatLeave.getSessionType() +" request.");
+//        notificationService.sendNotification(chatLeave.getAstrologerId(), chatLeave.getSessionType() + " Request Canceled", "Someone has canceled a "+ chatLeave.getSessionType() +" request.");
 
     }
 

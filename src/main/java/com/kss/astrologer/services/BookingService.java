@@ -3,11 +3,13 @@ package com.kss.astrologer.services;
 import com.kss.astrologer.dto.BookingAppointmentDto;
 import com.kss.astrologer.dto.CallSessionDto;
 import com.kss.astrologer.dto.ChatSessionDto;
+import com.kss.astrologer.events.BookingApprovedEvent;
+import com.kss.astrologer.events.BookingCancelledEvent;
+import com.kss.astrologer.events.BookingRequestEvent;
+import com.kss.astrologer.events.SessionCreatedEvent;
 import com.kss.astrologer.exceptions.CustomException;
 import com.kss.astrologer.models.*;
-import com.kss.astrologer.repository.AstrologerRepository;
-import com.kss.astrologer.repository.BookingAppointmentRepository;
-import com.kss.astrologer.repository.BookingConfigRepository;
+import com.kss.astrologer.repository.*;
 import com.kss.astrologer.request.CreateBookingRequest;
 import com.kss.astrologer.types.BookingStatus;
 import com.kss.astrologer.types.BookingType;
@@ -16,12 +18,14 @@ import com.kss.astrologer.types.SessionType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -43,7 +47,16 @@ public class BookingService {
     private UserService userService;
 
     @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private AdminService adminService;
+
+    @Autowired
     private AstrologerRepository astrologerRepository;
+
+    @Autowired
+    private ChatSessionRepository chatSessionRepository;
 
     @Autowired
     private WalletService walletService;
@@ -51,6 +64,10 @@ public class BookingService {
     @Autowired
     private OtpService otpService;
 
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
+
+    @Transactional
     public BookingAppointment bookAppointment(CreateBookingRequest request, UUID userId) {
         User user = userService.getById(userId);
         AstrologerDetails astrologer = astrologerRepository.findByUserId(request.getAstrologerId())
@@ -67,26 +84,43 @@ public class BookingService {
             throw new CustomException(HttpStatus.BAD_REQUEST, "Appointment date cannot be in the past");
         }
 
-        // 2. Find BookingConfig for astrologer (via astrologer Id)
-        Optional<BookingConfig> configOpt =
-                bookingConfigRepository.findByAstrologer_Id(astrologer.getId());
-
-        int bookingLimit = getBookingLimit(configOpt, appointmentDate);
-
-        // 4. Check daily booking limit
-        long existingBookings = bookingAppointmentRepository
-                .countByAstrologer_IdAndAppointmentDate(astrologer.getUser().getId(), appointmentDate);
-
-        if (existingBookings >= bookingLimit) {
-            throw new CustomException(HttpStatus.BAD_REQUEST,
-                    "Booking limit reached for this astrologer on this date");
-        }
+        // 2. Find BookingConfig for astrologer (via astrologer id)
+//        Optional<BookingConfig> configOpt =
+//                bookingConfigRepository.findByAstrologer_Id(astrologer.getId());
+//
+//        int bookingLimit = getBookingLimit(configOpt, appointmentDate);
+//
+//        // 4. Check daily booking limit
+//        long existingBookings = bookingAppointmentRepository
+//                .countByAstrologer_IdAndAppointmentDate(astrologer.getUser().getId(), appointmentDate);
+//
+//        if (existingBookings >= bookingLimit) {
+//            throw new CustomException(HttpStatus.BAD_REQUEST,
+//                    "Booking limit reached for this astrologer on this date");
+//        }
 
         Wallet userWallet = user.getWallet();
 
         if(request.getBookingType() == BookingType.ONLINE) {
             double totalCost = calculateTotalCost(astrologer, request.getSessionType(),
                     request.getAppointmentDuration());
+            boolean isFreeBooking = false;
+//            logger.info("request isFreeBooking: {}, !isFreeChatUsed: {}, getAppointmentDuration:{}",
+//                    request.isFreeBooking(),
+//                    !user.isFreeChatUsed(),
+//                    request.getAppointmentDuration());
+            if (!user.isFreeChatUsed() && !user.isFreeChatBooked() && request.getAppointmentDuration() <= 2) {
+                totalCost = 0.0;
+                isFreeBooking = true;
+                logger.info("Total Cost: {}", totalCost);
+                user.setFreeChatBooked(true);
+                userRepository.save(user);
+            }
+//            logger.info("request isFreeBooking: {}, !isFreeChatUsed:{}, getAppointmentDuration:{}",
+//                    request.isFreeBooking(),
+//                    !user.isFreeChatUsed(),
+//                    request.getAppointmentDuration());
+//            logger.info("Total Cost: {}", totalCost);
             double balance = userWallet.getBalance() != null ? userWallet.getBalance() : 0.0;
             double lockedBalance = userWallet.getLockedBalance() != null ? userWallet.getLockedBalance() : 0.0;
             double userBalance = balance - lockedBalance;
@@ -100,11 +134,23 @@ public class BookingService {
                     .appointmentDate(request.getAppointmentDate())
                     .appointmentDuration(request.getAppointmentDuration())
                     .totalCost(totalCost)
+                    .freeBooking(isFreeBooking)
                     .otp(otp)
                     .status(BookingStatus.PENDING)
+                    .bookingType(BookingType.ONLINE)
                     .sessionType(request.getSessionType())
                     .build();
-            return bookingAppointmentRepository.save(appointment);
+
+            BookingAppointment saved = bookingAppointmentRepository.save(appointment);
+            // 🔥 Publish event
+            eventPublisher.publishEvent(
+                    new BookingRequestEvent(
+                            appointment.getId(),
+                            appointment.getUser().getId(),
+                            appointment.getAstrologer().getId()
+                    )
+            );
+            return saved;
         }
         BookingAppointment appointment = BookingAppointment.builder()
                 .user(user)
@@ -116,7 +162,17 @@ public class BookingService {
                 .bookingType(BookingType.OFFLINE)
                 .sessionType(request.getSessionType())
                 .build();
-        return bookingAppointmentRepository.save(appointment);
+        BookingAppointment saved = bookingAppointmentRepository.save(appointment);
+
+        // 🔥 Publish event
+        eventPublisher.publishEvent(
+                new BookingRequestEvent(
+                        appointment.getId(),
+                        appointment.getUser().getId(),
+                        appointment.getAstrologer().getId()
+                )
+        );
+        return  saved;
     }
 
     private static int getBookingLimit(Optional<BookingConfig> configOpt, LocalDate appointmentDate) {
@@ -176,15 +232,81 @@ public class BookingService {
         return new BookingAppointmentDto(appointment);
     }
 
-    public BookingAppointmentDto updateStatus(UUID id, BookingStatus status, Integer otp) {
+    @Transactional
+    public BookingAppointmentDto updateStatus(UUID id, BookingStatus status) {
         BookingAppointment appointment = bookingAppointmentRepository.findById(id)
                 .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Appointment not found"));
-        if(status == BookingStatus.COMPLETED) {
-            if (otp== null || appointment.getOtp() != otp)
-                throw new CustomException("Invalid otp");
-        }
+//        if(status == BookingStatus.COMPLETED) {
+//            if (otp== null || appointment.getOtp() != otp)
+//                throw new CustomException("Invalid otp");
+//        }
+        if (appointment.getStatus() == status) throw new CustomException("It's already " + status);
+        if(status == BookingStatus.CANCELLED &&
+                (appointment.getStatus() == BookingStatus.APPROVED || appointment.getStatus() == BookingStatus.COMPLETED))
+            throw new CustomException("You can't cancel approved/completed appointment");
         appointment.setStatus(status);
-        return new BookingAppointmentDto(bookingAppointmentRepository.save(appointment));
+        BookingAppointment saved = bookingAppointmentRepository.save(appointment);
+
+        if(status==BookingStatus.CANCELLED) {
+            eventPublisher.publishEvent(
+                    new BookingCancelledEvent(
+                            appointment.getId(),
+                            appointment.getUser().getId()
+                    )
+            );
+        } else if (status == BookingStatus.APPROVED) {
+            eventPublisher.publishEvent(
+                    new BookingApprovedEvent(
+                            appointment.getId(),
+                            appointment.getUser().getId()
+                    )
+            );
+        }
+        if (status == BookingStatus.COMPLETED && saved.getBookingType() == BookingType.ONLINE) {
+            Wallet userWallet = saved.getUser().getWallet();
+            double cost = saved.getTotalCost();
+            walletService.subtractLockedBalance(userWallet.getId(), cost);
+            walletService.debitBalance(saved.getUser().getId(), cost,
+                    "Session with astrologer " + saved.getAstrologer().getName() + " for "
+                    + saved.getAppointmentDuration() + " minutes.");
+            double adminProfit = cost * 0.35;
+            double astrologerProfit = cost - adminProfit;
+            walletService.creditBalance(saved.getAstrologer().getId(), astrologerProfit,
+                    "Session with user " + saved.getUser().getName() +
+                    " for " + saved.getAppointmentDuration() + " minutes.");
+            walletService.creditBalance(adminService.getAdminId(), adminProfit,
+                    "Session with astrologer " + saved.getAstrologer().getName() +
+                    " for " + saved.getAppointmentDuration() + " minutes.");
+
+            if (saved.getSessionType() == SessionType.CHAT) {
+                ChatSession chatSession = saved.getChatSession();
+                if (chatSession != null) {
+                    chatSession.setStatus(ChatStatus.ENDED);
+                    chatSessionRepository.save(chatSession);
+                }
+            }
+
+            if (saved.isFreeBooking()) {
+                User user = userService.getById(saved.getUser().getId());
+                user.setFreeChatUsed(true);
+                user.setFreeChatBooked(true);
+                userRepository.save(user);
+            }
+        }
+
+        if (status == BookingStatus.CANCELLED && saved.getBookingType() == BookingType.ONLINE) {
+            Wallet userWallet = saved.getUser().getWallet();
+            double cost = saved.getTotalCost();
+            walletService.subtractLockedBalance(userWallet.getId(), cost);
+
+            if (saved.isFreeBooking()) {
+                User user = userService.getById(saved.getUser().getId());
+                user.setFreeChatBooked(false);
+                userRepository.save(user);
+            }
+        }
+        if (status == BookingStatus.APPROVED) return createChatSession(appointment.getId(), appointment.getSessionType());
+        return new BookingAppointmentDto(saved);
     }
 
     public BookingAppointmentDto createChatSession(UUID appointmentId, SessionType type) {
@@ -200,8 +322,18 @@ public class BookingService {
                     .totalMinutes(appointment.getAppointmentDuration())
                     .totalCost(appointment.getTotalCost())
                     .build();
+
             appointment.setChatSession(chatSession);
-            return new BookingAppointmentDto(bookingAppointmentRepository.save(appointment));
+            BookingAppointment savedAppointment = bookingAppointmentRepository.save(appointment);
+//            eventPublisher.publishEvent(
+//                    new SessionCreatedEvent(
+//                            appointment.getUser().getId(),
+//                            appointment.getAstrologer().getId(),
+//                            chatSession.getId(),
+//                            SessionType.CHAT
+//                    )
+//            );
+            return new BookingAppointmentDto(savedAppointment);
         } else {
             CallSession callSession = CallSession.builder()
                     .astrologer(appointment.getAstrologer())
@@ -214,7 +346,18 @@ public class BookingService {
                     .totalCost(appointment.getTotalCost())
                     .build();
             appointment.setCallSession(callSession);
-            return new BookingAppointmentDto(bookingAppointmentRepository.save(appointment));
+
+            BookingAppointment savedAppointment = bookingAppointmentRepository.save(appointment);
+
+//            eventPublisher.publishEvent(
+//                    new SessionCreatedEvent(
+//                            appointment.getUser().getId(),
+//                            appointment.getAstrologer().getId(),
+//                            callSession.getId(),
+//                            type
+//                    )
+//            );
+            return new BookingAppointmentDto(savedAppointment);
         }
     }
 }

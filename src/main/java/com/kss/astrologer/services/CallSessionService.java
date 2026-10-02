@@ -5,18 +5,22 @@ import com.kss.astrologer.dto.CallSessionDto;
 import com.kss.astrologer.dto.ChatQueueEntry;
 import com.kss.astrologer.dto.QueueEntryDto;
 import com.kss.astrologer.dto.QueueNotificationDto;
+import com.kss.astrologer.events.CallStartedEvent;
 import com.kss.astrologer.exceptions.CustomException;
 import com.kss.astrologer.models.*;
 import com.kss.astrologer.repository.AstrologerRepository;
 import com.kss.astrologer.repository.CallSessionRepository;
 import com.kss.astrologer.repository.UserRepository;
 import com.kss.astrologer.repository.WalletRepository;
+import com.kss.astrologer.request.CallNotificationRequest;
 import com.kss.astrologer.services.notification.NotificationService;
 import com.kss.astrologer.types.ChatStatus;
 import com.kss.astrologer.types.SessionType;
+import com.kss.astrologer.utils.RandomStringGenerator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -74,6 +78,9 @@ public class CallSessionService {
     @Autowired
     private NotificationService notificationService;
 
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
+
     private final Map<UUID, ScheduledFuture<?>> timerTasks = new ConcurrentHashMap<>();
 
     public long requestCall(UUID userId, UUID astrologerId, int requestedMinutes, SessionType type) {
@@ -97,7 +104,7 @@ public class CallSessionService {
         //Notification
         QueueNotificationDto queueNotificationDto = new QueueNotificationDto(userId, type, "New " + type.name() + " call request received");
         messagingTemplate.convertAndSend("/topic/queue/" + astrologerId, queueNotificationDto);
-        notificationService.sendNotification(astrologerId, "New Call Request", "You have received a new call request. Please respond as soon as possible");
+//        notificationService.sendNotification(astrologerId, "New Call Request", "You have received a new call request. Please respond as soon as possible");
 
         List<QueueEntryDto> requests = getRequestList(astrologerId);
         messagingTemplate.convertAndSend("/topic/requests/" + astrologerId, requests);
@@ -117,7 +124,7 @@ public class CallSessionService {
         }
 
         //Notification
-        notificationService.sendNotification(userId, "Call Request Accepted", "Astrologer has accepted your call request. Please join as soon as possible");
+//        notificationService.sendNotification(userId, "Call Request Accepted", "Astrologer has accepted your call request. Please join as soon as possible");
         List<QueueEntryDto> requests = getRequestList(astrologerId);
         messagingTemplate.convertAndSend("/topic/requests/" + astrologerId, requests);
 
@@ -302,4 +309,15 @@ public class CallSessionService {
         long seconds = totalSeconds % 60;
         return String.format("%02d:%02d", minutes, seconds);
     }
+
+    public String sendCallNotification(UUID senderId, CallNotificationRequest request) {
+        User user = userRepository.findById(senderId)
+                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Sender not found"));
+        String roomId = RandomStringGenerator.generateRandomString(10);
+        eventPublisher.publishEvent(new CallStartedEvent(this, senderId, user.getName(),
+                request.getReceiverId(), roomId, request.getSessionType()));
+        return roomId;
+    }
+
+
 }

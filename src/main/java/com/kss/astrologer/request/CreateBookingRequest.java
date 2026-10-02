@@ -17,6 +17,7 @@ public class CreateBookingRequest {
     private LocalDate appointmentDate;
     @Min(value = 2, message = "Minimum duration is 2 minutes")
     private int appointmentDuration;   // minutes
+    private boolean isFreeBooking;
     private String reason;
     private BookingType bookingType;
     private SessionType sessionType;

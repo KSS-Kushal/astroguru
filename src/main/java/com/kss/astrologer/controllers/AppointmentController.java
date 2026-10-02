@@ -59,7 +59,7 @@ public class AppointmentController {
     @PatchMapping("/{id}")
     public ResponseEntity<Object> updateAppointmentStatus(@PathVariable UUID id,
                                                           @RequestBody UpdateAppointmentStatusRequest body) {
-        BookingAppointmentDto appointment = bookingService.updateStatus(id, body.getStatus(), body.getOtp());
+        BookingAppointmentDto appointment = bookingService.updateStatus(id, body.getStatus());
         return ResponseHandler.responseBuilder(HttpStatus.OK, true, "Appointment status updated successfully",
                 "appointment", appointment);
     }

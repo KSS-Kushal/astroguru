@@ -27,8 +27,8 @@ public class BookingAppointmentDto {
     private BookingStatus status;
     private BookingType bookingType;
     private SessionType sessionType;
-    private UUID chatSessionId;
-    private UUID callSessionId;
+    private ChatSessionDto chatSession;
+    private CallSessionDto callSession;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -44,8 +44,10 @@ public class BookingAppointmentDto {
         this.status = appointment.getStatus();
         this.bookingType = appointment.getBookingType();
         this.sessionType = appointment.getSessionType();
-        this.chatSessionId = appointment.getChatSession() != null ? appointment.getChatSession().getId() : null;
-        this.callSessionId = appointment.getCallSession() != null ? appointment.getCallSession().getId() : null;
+        this.chatSession = appointment.getChatSession() != null ? new ChatSessionDto(appointment.getChatSession()) :
+                null;
+        this.callSession = appointment.getCallSession() != null ? new CallSessionDto(appointment.getCallSession()) :
+                null;
         this.createdAt = appointment.getCreatedAt();
         this.updatedAt = appointment.getUpdatedAt();
     }

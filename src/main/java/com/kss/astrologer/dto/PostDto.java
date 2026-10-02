@@ -9,7 +9,6 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
-
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -20,13 +19,32 @@ public class PostDto {
     private List<PostImage> images;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private long likeCount;
+    private long commentCount;
+    private boolean isLiked;
 
-    public PostDto(Post post) {
+//    public PostDto(Post post) {
+//        this.id = post.getId();
+//        this.astrologer = new AstrologerDto(post.getAstrologer());
+//        this.text = post.getText();
+//        this.images = post.getImages();
+//        this.createdAt = post.getCreatedAt();
+//        this.updatedAt = post.getUpdatedAt();
+//        this.likeCount = post.getLikes().size();
+//        this.commentCount = post.getComments().size();
+//        this.isLiked = false;
+//    }
+    public PostDto(Post post, UUID userId) {
         this.id = post.getId();
         this.astrologer = new AstrologerDto(post.getAstrologer());
         this.text = post.getText();
         this.images = post.getImages();
         this.createdAt = post.getCreatedAt();
         this.updatedAt = post.getUpdatedAt();
+        this.likeCount = post.getLikes() != null ? post.getLikes().size() : 0L;
+        this.commentCount = post.getComments() != null ? post.getComments().size() : 0L;
+        this.isLiked = post.getLikes() != null && post.getLikes()
+                .stream()
+                .anyMatch(like -> like.getUser().getId().equals(userId));
     }
 }

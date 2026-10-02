@@ -12,6 +12,9 @@ import lombok.NoArgsConstructor;
 public class AuthRequest {
 
     @NotBlank(message = "Mobile number is required")
-    @Pattern(regexp = "^\\d{10}$", message = "Mobile number must be 10 digits")
+    @Pattern(
+            regexp = "^(\\d{10}|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})$",
+            message = "Must be a valid 10-digit mobile number or email address"
+    )
     private String mobile;
 }
